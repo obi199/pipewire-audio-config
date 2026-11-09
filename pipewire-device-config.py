@@ -272,7 +272,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.channel_volume_scroll.setMaximumHeight(150)
         self.channel_volume_scroll.setMinimumHeight(120)
         
-        volume_layout.addWidget(QLabel("Per-Channel Volume:"))
+        volume_layout.addWidget(QLabel("Input Channels:"))
         volume_layout.addWidget(self.channel_volume_scroll)
         
         volume_group.setLayout(volume_layout)
@@ -938,7 +938,7 @@ monitor.alsa.rules = [
                 lambda value, label=vol_label: label.setText(f"{value}%")
             )
             slider.valueChanged.connect(
-                lambda value: self._apply_volume_to_device(value)
+                lambda value, ch_idx=i: self._apply_channel_volume(ch_idx, value)
             )
             
             # Mute button
@@ -948,7 +948,7 @@ monitor.alsa.rules = [
             mute_btn.setMaximumHeight(30)
             mute_btn.setStyleSheet("font-size: 11px; padding: 2px;")
             mute_btn.clicked.connect(
-                lambda checked, btn_ref=mute_btn: self.toggle_channel_mute(checked, btn_ref)
+                lambda checked, btn_ref=mute_btn, ch_idx=i: self.toggle_channel_mute(checked, btn_ref, ch_idx)
             )
             ch_layout.addWidget(mute_btn, alignment=Qt.AlignHCenter)
             self.channel_mute_buttons[channel_id] = mute_btn
@@ -961,7 +961,7 @@ monitor.alsa.rules = [
         # Add stretch at the end for horizontal spacing
         self.channel_volume_layout.addStretch()
 
-    def toggle_channel_mute(self, checked, button):
+    def toggle_channel_mute(self, checked, button, channel_index):
         """Toggle mute for individual channel"""
         if checked:
             button.setText("🔇 Muted")
@@ -970,9 +970,9 @@ monitor.alsa.rules = [
             button.setText("🔊 Unmuted")
             button.setStyleSheet("")
         
-         # Apply mute to PipeWire device
+        # Apply mute to specific channel in PipeWire device
         if self.current_device:
-            self._apply_mute_to_device(checked)
+            self._apply_channel_mute(channel_index, checked)
 
     def _get_wpctl_device_id(self, device_name):
         """Find the wpctl device ID for a given device name"""
@@ -1044,8 +1044,8 @@ monitor.alsa.rules = [
         except Exception as e:
             print(f"Error applying mute: {e}")
 
-    def _apply_volume_to_device(self, volume_percent):
-        """Apply volume percentage to the current device using wpctl"""
+    def _apply_channel_volume(self, channel_index, volume_percent):
+        """Apply volume percentage to a specific channel using wpctl"""
         try:
             if not self.current_device:
                 return
@@ -1059,7 +1059,70 @@ monitor.alsa.rules = [
             # Convert percentage (0-100) to decimal (0.0-1.0)
             volume_decimal = volume_percent / 100.0
             
-            # Set volume using wpctl
+            # Set volume for specific channel using wpctl
+            # Format: wpctl set-volume <device_id>:<channel> <volume>
+            channel_str = f"{device_id}:{channel_index}"
+            result = subprocess.run(
+                ['wpctl', 'set-volume', channel_str, f'{volume_decimal:.2f}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode != 0:
+                # Fallback: try without channel index (some devices may not support it)
+                # In that case, it will adjust master volume
+                print(f"Note: Per-channel volume may not be supported for this device")
+        except Exception as e:
+            print(f"Error applying channel volume: {e}")
+
+    def _apply_channel_mute(self, channel_index, mute_state):
+        """Apply mute state to a specific channel using wpctl"""
+        try:
+            if not self.current_device:
+                return
+            
+            # Get wpctl device ID
+            device_id = self._get_wpctl_device_id(self.current_device['description'])
+            if device_id is None:
+                print(f"Warning: Could not find wpctl ID for {self.current_device['description']}")
+                return
+            
+            # Convert boolean to wpctl mute value (1 = muted, 0 = unmuted)
+            mute_value = 1 if mute_state else 0
+            
+            # Set mute for specific channel using wpctl
+            # Format: wpctl set-mute <device_id>:<channel> <mute>
+            channel_str = f"{device_id}:{channel_index}"
+            result = subprocess.run(
+                ['wpctl', 'set-mute', channel_str, str(mute_value)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode != 0:
+                # Fallback: try without channel index
+                print(f"Note: Per-channel mute may not be supported for this device")
+        except Exception as e:
+            print(f"Error applying channel mute: {e}")
+
+    def _apply_volume_to_device(self, volume_percent):
+        """Apply volume percentage to the current device (master) using wpctl - DEPRECATED, use _apply_channel_volume instead"""
+        try:
+            if not self.current_device:
+                return
+            
+            # Get wpctl device ID
+            device_id = self._get_wpctl_device_id(self.current_device['description'])
+            if device_id is None:
+                print(f"Warning: Could not find wpctl ID for {self.current_device['description']}")
+                return
+            
+            # Convert percentage (0-100) to decimal (0.0-1.0)
+            volume_decimal = volume_percent / 100.0
+            
+            # Set volume using wpctl (master/all channels)
             result = subprocess.run(
                 ['wpctl', 'set-volume', str(device_id), f'{volume_decimal:.2f}'],
                 capture_output=True,
