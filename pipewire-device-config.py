@@ -627,22 +627,13 @@ monitor.alsa.rules = [
         self.restart_btn.setEnabled(False)  # Disable restart button during restart
         
         try:
-            # Show a progress message
-            progress_msg = QMessageBox(self)
-            progress_msg.setWindowTitle("Restarting WirePlumber")
-            progress_msg.setText("Restarting WirePlumber service...\n\nPlease wait...")
-            progress_msg.setStandardButtons(QMessageBox.NoButton)
-            progress_msg.show()
-            
-            # Restart WirePlumber
+            # Restart WirePlumber (no progress message since it blocks)
             result = subprocess.run(
                 ['systemctl', '--user', 'restart', 'wireplumber'],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
-            
-            progress_msg.close()
             
             if result.returncode == 0:
                 # Wait for service to fully restart
