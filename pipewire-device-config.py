@@ -310,10 +310,19 @@ class PipeWireConfigGUI(QMainWindow):
     def on_device_changed(self, index):
         """Handle device selection change"""
         if index < 0 or not self.devices:
+            # Clearing device selection, disable volume controls
+            self.current_device = None
+            # Disconnect volume/mute signals temporarily
+            self.master_volume_slider.blockSignals(True)
+            self.master_mute_btn.blockSignals(True)
             return
         
         self.current_device = self.device_combo.itemData(index)
         self.update_device_info()
+        
+        # Re-enable signals after update
+        self.master_volume_slider.blockSignals(False)
+        self.master_mute_btn.blockSignals(False)
 
     def _nearest_buffer_size(self, samples):
         """Find nearest standard buffer size"""
@@ -638,7 +647,22 @@ monitor.alsa.rules = [
         """Create per-channel volume sliders and mute buttons"""
         # Clear existing controls
         while self.channel_volume_layout.count():
-            self.channel_volume_layout.takeAt(0).widget().deleteLater()
+            widget = self.channel_volume_layout.takeAt(0).widget()
+            if widget:
+                widget.deleteLater()
+        
+        # Disconnect any existing signals from old sliders/buttons
+        for slider in self.channel_sliders.values():
+            try:
+                slider.valueChanged.disconnect()
+            except:
+                pass
+        
+        for button in self.channel_mute_buttons.values():
+            try:
+                button.clicked.disconnect()
+            except:
+                pass
         
         self.channel_sliders.clear()
         self.channel_mute_buttons.clear()
