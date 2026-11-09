@@ -675,30 +675,91 @@ monitor.alsa.rules = [
         
         try:
             # Get current settings
+            channels = int(self.channels_combo.currentText())
+            sample_rate = int(self.rate_combo.currentText())
+            use_acp = self.acp_combo.currentIndex() == 1
             buffer_size = int(value)
-            sample_rate = self.current_device.get('rate', 48000)
+            latency_ns = int(buffer_size / sample_rate * 1e9)
             
-            # Generate and save config immediately
-            config_content = self._generate_wireplumber_config(
-                self.current_device,
-                int(self.channels_combo.currentText()),
-                int(self.rate_combo.currentText()),
-                self.acp_combo.currentIndex(),
-                buffer_size
-            )
+            # Generate device matching pattern (same logic as save_profile)
+            dev_name = self.current_device['name']
+            if 'usb' in dev_name:
+                match_pattern = dev_name.split('.')[-2]
+                device_pattern = f'~alsa_.*{match_pattern}.*'
+            else:
+                device_pattern = f'~alsa_.*{dev_name}.*'
             
-            # Save config file
-            config_file = self._get_config_file_path(self.current_device)
+            # Build channel position list (same as save_profile)
+            position_map = {
+                2: '[ "FL", "FR" ]',
+                4: '[ "FL", "FR", "RL", "RR" ]',
+                6: '[ "FL", "FR", "FC", "LFE", "RL", "RR" ]',
+                8: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "SL", "SR" ]',
+                12: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "FLC", "FRC", "RC", "SL", "SR", "TC" ]',
+                16: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "FLC", "FRC", "RC", "SL", "SR", "TC", "TFL", "TFR", "TRL", "TRR" ]',
+            }
+            position = position_map.get(channels, '[ "FL", "FR" ]')
+            
+            # Collect per-channel volume and mute settings
+            channel_volumes = []
+            channel_mutes = []
+            for i in range(channels):
+                channel_id = f"ch_{i}"
+                volume = self.channel_sliders.get(channel_id, {}).value() if channel_id in self.channel_sliders else 100
+                muted = self.channel_mute_buttons.get(channel_id, {}).isChecked() if channel_id in self.channel_mute_buttons else False
+                channel_volumes.append(volume)
+                channel_mutes.append("true" if muted else "false")
+            
+            volumes_str = "[ " + ", ".join(str(v) for v in channel_volumes) + " ]"
+            mutes_str = "[ " + ", ".join(channel_mutes) + " ]"
+            
+            # Create config file (same format as save_profile)
+            config_content = f"""# PipeWire Audio Device Configuration
+# Device: {self.current_device['description']}
+# Auto-generated configuration
+# Buffer Size: {buffer_size} samples ({buffer_size/sample_rate*1000:.2f}ms @ {sample_rate}Hz)
+# Master Volume: {self.master_volume_slider.value()}%
+# Master Mute: {"true" if self.master_mute_btn.isChecked() else "false"}
+
+monitor.alsa.rules = [
+  {{
+    matches = [
+      {{
+        node.name = "{device_pattern}"
+      }}
+    ]
+    actions = {{
+      update-props = {{
+        api.alsa.use-acp = {str(use_acp).lower()}
+        audio.channels = {channels}
+        audio.position = {position}
+        latency.internal.ns = {latency_ns}
+        # Volume and mute settings
+        # Master volume: 0-100%
+        # Master mute: true/false
+        # Per-channel volumes: {volumes_str}
+        # Per-channel mutes: {mutes_str}
+      }}
+    }}
+  }}
+]
+"""
+            
+            # Save config file to WirePlumber config directory
+            device_short = self.current_device['description'].replace(' ', '-')[:20]
+            config_file = self.config_dir / f'50-device-{device_short}.conf'
             config_file.parent.mkdir(parents=True, exist_ok=True)
             config_file.write_text(config_content)
             
-            # Show a brief notification about pending restart
-            print(f"Buffer size updated to {buffer_size} samples")
-            print(f"Config saved to {config_file}")
-            print("Restart WirePlumber to apply changes")
+            # Print status messages
+            print(f"✅ Buffer size updated to {buffer_size} samples ({buffer_size/sample_rate*1000:.2f}ms)")
+            print(f"✅ Config saved to {config_file}")
+            print(f"⚠️  Restart WirePlumber to apply changes: systemctl --user restart wireplumber")
             
         except Exception as e:
-            print(f"Error updating buffer size: {e}")
+            print(f"❌ Error updating buffer size: {e}")
+            import traceback
+            traceback.print_exc()
     def load_device_volume_settings(self):
         """Load previously saved volume/mute settings for current device"""
         if not self.current_device:
