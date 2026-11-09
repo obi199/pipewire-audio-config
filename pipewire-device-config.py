@@ -3,6 +3,7 @@
 PipeWire Audio Device Configuration GUI
 Configure USB audio devices: channels, sample rate, latency
 Works with any USB audio device on PipeWire
+Supports custom channel naming for specific devices
 """
 
 import sys
@@ -16,6 +17,46 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
+
+
+# Device-specific channel mappings
+DEVICE_CHANNEL_NAMES = {
+    "Babyface Pro": {
+        "name": "RME Babyface Pro - Physical I/O",
+        "channels": 12,
+        "description": "Babyface Pro with main analog I/O + 8x ADAT + S/PDIF",
+        "layout": {
+            "outputs": [
+                "Main-L",      # 0: Analog Out Left (XLR)
+                "Main-R",      # 1: Analog Out Right (XLR)
+                "ADAT-1",      # 2-9: ADAT Out 1-8
+                "ADAT-2",
+                "ADAT-3",
+                "ADAT-4",
+                "ADAT-5",
+                "ADAT-6",
+                "ADAT-7",
+                "ADAT-8",
+                "S/PDIF-L",    # 10: Digital Out Left
+                "S/PDIF-R",    # 11: Digital Out Right
+            ],
+            "inputs": [
+                "Main-L",      # 0: Analog In Left (XLR)
+                "Main-R",      # 1: Analog In Right (XLR)
+                "ADAT-1",      # 2-9: ADAT In 1-8
+                "ADAT-2",
+                "ADAT-3",
+                "ADAT-4",
+                "ADAT-5",
+                "ADAT-6",
+                "ADAT-7",
+                "ADAT-8",
+                "S/PDIF-L",    # 10: Digital In Left
+                "S/PDIF-R",    # 11: Digital In Right
+            ]
+        }
+    }
+}
 
 
 class DeviceDetector(QThread):
@@ -231,6 +272,14 @@ class PipeWireConfigGUI(QMainWindow):
         nearest = min(sizes, key=lambda x: abs(x - samples))
         return nearest
 
+    def _get_device_channel_names(self, device_description, direction='outputs'):
+        """Get custom channel names for known devices"""
+        # Check if this device has custom naming
+        for device_key, device_config in DEVICE_CHANNEL_NAMES.items():
+            if device_key.lower() in device_description.lower():
+                return device_config['layout'].get(direction, [])
+        return None
+
     def update_device_info(self):
         """Update device information display"""
         if not self.current_device:
@@ -241,6 +290,14 @@ class PipeWireConfigGUI(QMainWindow):
         latency_samples = int(dev['latency_ns'] / 1000000 * 48 / 1000) if dev['latency_ns'] > 0 else 256
         # Find nearest power of 2
         nearest_buffer = self._nearest_buffer_size(latency_samples)
+        
+        # Check for custom channel names
+        custom_names = self._get_device_channel_names(dev['description'])
+        direction = 'outputs' if dev['media_class'] == 'Audio/Sink' else 'inputs'
+        
+        channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
+        if custom_names and len(custom_names) == dev['channels']:
+            channel_info += f"\n  Custom Names: {', '.join(custom_names)}"
         
         info_text = f"""
 Device: {dev['description']}
@@ -253,7 +310,7 @@ Current Settings:
   ACP Mode: {'Enabled' if dev['use_acp'] else 'Disabled'}
   Buffer Size: ~{nearest_buffer} samples ({nearest_buffer / 48:.1f}ms @ 48kHz)
   
-Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}
+{channel_info}
         """
         self.info_label.setText(info_text.strip())
         
