@@ -285,12 +285,12 @@ class PipeWireConfigGUI(QMainWindow):
         def create_fader_column(label_text, control_key, sliders_dict, labels_dict):
             """Create a vertical fader with label and percentage"""
             column = QVBoxLayout()
-            column.setSpacing(3)
+            column.setSpacing(2)
             
             # Label at top
             label = QLabel(label_text)
             label.setAlignment(Qt.AlignCenter)
-            label.setStyleSheet("font-weight: bold; font-size: 9px;")
+            label.setStyleSheet("font-weight: bold; font-size: 8px;")
             column.addWidget(label)
             
             # Fader
@@ -299,15 +299,15 @@ class PipeWireConfigGUI(QMainWindow):
             slider.setValue(65536)
             slider.setTickPosition(QSlider.TicksLeft)
             slider.setTickInterval(6553)
-            slider.setMinimumHeight(100)
-            slider.setMaximumWidth(30)
+            slider.setMinimumHeight(80)
+            slider.setMaximumWidth(24)
             slider.valueChanged.connect(lambda value, key=control_key: self.on_input_gain_changed(key, value))
             column.addWidget(slider, alignment=Qt.AlignCenter)
             
             # Percentage label
             pct_label = QLabel("100%")
             pct_label.setAlignment(Qt.AlignCenter)
-            pct_label.setStyleSheet("font-size: 8px;")
+            pct_label.setStyleSheet("font-size: 7px;")
             column.addWidget(pct_label)
             
             sliders_dict[control_key] = slider
@@ -325,7 +325,7 @@ class PipeWireConfigGUI(QMainWindow):
         faders_container = QWidget()
         input_group_layout = QHBoxLayout()
         input_group_layout.setContentsMargins(10, 10, 10, 10)
-        input_group_layout.setSpacing(10)
+        input_group_layout.setSpacing(20)
         
         # S/PDIF-L (AS1)
         input_group_layout.addLayout(create_fader_column("AS1-L", "Line-AS1-AN1", self.spdif_sliders, self.spdif_labels))
