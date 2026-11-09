@@ -497,11 +497,9 @@ monitor.alsa.rules = [
         audio.channels = {channels}
         audio.position = {position}
         latency.internal.ns = {latency_ns}
-        # Volume and mute settings
+        # Volume settings
         # Master volume: 0-100%
         # Master mute: true/false
-        # Per-channel volumes: {volumes_str}
-        # Per-channel mutes: {mutes_str}
       }}
     }}
   }}
@@ -524,9 +522,7 @@ monitor.alsa.rules = [
             volume_config = {
                 'device': self.current_device['description'],
                 'master_volume': self.master_volume_slider.value(),
-                'master_muted': self.master_mute_btn.isChecked(),
-                'channel_volumes': channel_volumes,
-                'channel_mutes': channel_mutes
+                'master_muted': self.master_mute_btn.isChecked()
             }
             volume_file = self.config_dir / f'volume-{device_short}.json'
             with open(volume_file, 'w') as f:
@@ -709,11 +705,9 @@ monitor.alsa.rules = [
         audio.channels = {channels}
         audio.position = {position}
         latency.internal.ns = {latency_ns}
-        # Volume and mute settings
+        # Volume settings
         # Master volume: 0-100%
         # Master mute: true/false
-        # Per-channel volumes: {volumes_str}
-        # Per-channel mutes: {mutes_str}
       }}
     }}
   }}
@@ -827,7 +821,7 @@ monitor.alsa.rules = [
             print(f"Error applying mute: {e}")
 
     def _apply_volume_to_device(self, volume_percent):
-        """Apply volume percentage to the current device (master) using wpctl - DEPRECATED, use _apply_channel_volume instead"""
+        """Apply volume percentage to the current device using wpctl"""
         try:
             if not self.current_device:
                 return
