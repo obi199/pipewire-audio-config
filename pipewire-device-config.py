@@ -155,7 +155,7 @@ class PipeWireConfigGUI(QMainWindow):
     def init_ui(self):
         """Initialize the GUI with tabs"""
         self.setWindowTitle('PipeWire Audio Device Configuration')
-        self.setGeometry(100, 100, 900, 650)
+        self.setGeometry(100, 100, 1200, 700)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -290,7 +290,7 @@ class PipeWireConfigGUI(QMainWindow):
             # Label at top
             label = QLabel(label_text)
             label.setAlignment(Qt.AlignCenter)
-            label.setStyleSheet("font-weight: bold; font-size: 8px;")
+            label.setStyleSheet("font-weight: bold; font-size: 11px;")
             column.addWidget(label)
             
             # Fader
@@ -299,15 +299,15 @@ class PipeWireConfigGUI(QMainWindow):
             slider.setValue(65536)
             slider.setTickPosition(QSlider.TicksLeft)
             slider.setTickInterval(6553)
-            slider.setMinimumHeight(80)
-            slider.setMaximumWidth(24)
+            slider.setMinimumHeight(100)
+            slider.setMaximumWidth(30)
             slider.valueChanged.connect(lambda value, key=control_key: self.on_input_gain_changed(key, value))
             column.addWidget(slider, alignment=Qt.AlignCenter)
             
             # Percentage label
             pct_label = QLabel("100%")
             pct_label.setAlignment(Qt.AlignCenter)
-            pct_label.setStyleSheet("font-size: 7px;")
+            pct_label.setStyleSheet("font-size: 10px;")
             column.addWidget(pct_label)
             
             sliders_dict[control_key] = slider
@@ -325,7 +325,7 @@ class PipeWireConfigGUI(QMainWindow):
         faders_container = QWidget()
         input_group_layout = QHBoxLayout()
         input_group_layout.setContentsMargins(10, 10, 10, 10)
-        input_group_layout.setSpacing(20)
+        input_group_layout.setSpacing(25)
         
         # S/PDIF-L (AS1)
         input_group_layout.addLayout(create_fader_column("AS1-L", "Line-AS1-AN1", self.spdif_sliders, self.spdif_labels))
