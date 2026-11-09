@@ -9,6 +9,7 @@ Supports custom channel naming for specific devices
 import sys
 import json
 import subprocess
+import re
 from pathlib import Path
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -776,21 +777,23 @@ Current Settings:
             sink_id = None
             
             for line in lines:
-                # Look for sink line with device name (contains '*' and 'Analoges Stereo' or similar)
+                # Look for sink line with device name (contains '*' for default)
                 if device_name.lower() in line.lower() and '*' in line:
-                    # Extract the ID (number at the start)
-                    parts = line.strip().split('.')
-                    if parts and parts[0].strip().isdigit():
-                        sink_id = int(parts[0].strip())
+                    # Extract ID using regex: match numbers before the device name
+                    # Format: "│  *   67. Device Name [vol: 0.50]"
+                    match = re.search(r'\*\s+(\d+)', line)
+                    if match:
+                        sink_id = int(match.group(1))
                         break
             
-            # Fallback: if not found, try to find any matching device ID
+            # Fallback: if not found, try to find any matching device ID (without * requirement)
             if sink_id is None:
                 for line in lines:
                     if device_name.lower() in line.lower():
-                        parts = line.strip().split('.')
-                        if parts and parts[0].strip().isdigit():
-                            sink_id = int(parts[0].strip())
+                        # Extract any number before device name
+                        match = re.search(r'^\s*[│├└]*\s*\*?\s+(\d+)', line)
+                        if match:
+                            sink_id = int(match.group(1))
                             break
             
             return sink_id
