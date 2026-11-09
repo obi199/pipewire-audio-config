@@ -363,8 +363,13 @@ class PipeWireConfigGUI(QMainWindow):
             return
         
         dev = self.current_device
-        # Convert nanoseconds to samples (assuming 48kHz as reference)
-        latency_samples = int(dev['latency_ns'] / 1000000 * 48 / 1000) if dev['latency_ns'] > 0 else 256
+        # Convert nanoseconds to samples using actual device sample rate
+        if dev['latency_ns'] > 0 and dev['rate'] > 0:
+            latency_ms = dev['latency_ns'] / 1e6
+            latency_samples = int((latency_ms * dev['rate']) / 1000)
+        else:
+            latency_samples = 256
+        
         # Find nearest power of 2
         nearest_buffer = self._nearest_buffer_size(latency_samples)
         
@@ -387,7 +392,7 @@ Current Settings:
   Sample Rate: {dev['rate']} Hz
   ALSA Path: {dev['alsa_path']}
   ACP Mode: {'Enabled' if dev['use_acp'] else 'Disabled'}
-  Buffer Size: ~{nearest_buffer} samples ({nearest_buffer / 48:.1f}ms @ 48kHz)
+  Buffer Size: ~{nearest_buffer} samples ({nearest_buffer / dev['rate'] * 1000:.2f}ms @ {dev['rate']}Hz)
   
 {channel_info}
         """
@@ -399,6 +404,13 @@ Current Settings:
             self.rate_combo.setCurrentText(str(dev['rate']))
         self.acp_combo.setCurrentIndex(1 if dev['use_acp'] else 0)
         self.latency_combo.setCurrentText(str(nearest_buffer))
+        
+        # Create per-channel volume controls
+        get_names = self._get_device_channel_names(dev['description'], direction)
+        self.create_channel_volume_controls(dev['channels'], get_names)
+        
+        # Load saved volume settings
+        self.load_device_volume_settings()
 
     def apply_config(self):
         """Apply configuration changes"""
@@ -756,59 +768,9 @@ monitor.alsa.rules = [
             button.setText("🔊 Unmuted")
             button.setStyleSheet("")
         
-        # Apply mute to PipeWire device
+         # Apply mute to PipeWire device
         if self.current_device:
             self._apply_mute_to_device(checked)
-
-    def update_device_info(self):
-        """Update device information display"""
-        if not self.current_device:
-            return
-        
-        dev = self.current_device
-        # Convert nanoseconds to samples (assuming 48kHz as reference)
-        latency_samples = int(dev['latency_ns'] / 1000000 * 48 / 1000) if dev['latency_ns'] > 0 else 256
-        # Find nearest power of 2
-        nearest_buffer = self._nearest_buffer_size(latency_samples)
-        
-        # Check for custom channel names
-        custom_names = self._get_device_channel_names(dev['description'])
-        direction = 'outputs' if dev['media_class'] == 'Audio/Sink' else 'inputs'
-        
-        # Only show channel layout if no custom names available
-        if custom_names and len(custom_names) == dev['channels']:
-            channel_info = f"Channel Mapping: {', '.join(custom_names)}"
-        else:
-            channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
-        
-        info_text = f"""
-Device: {dev['description']}
-Type: {'Output (Speaker/Headphone)' if dev['media_class'] == 'Audio/Sink' else 'Input (Microphone)'}
-
-Current Settings:
-  Channels: {dev['channels']}
-  Sample Rate: {dev['rate']} Hz
-  ALSA Path: {dev['alsa_path']}
-  ACP Mode: {'Enabled' if dev['use_acp'] else 'Disabled'}
-  Buffer Size: ~{nearest_buffer} samples ({nearest_buffer / 48:.1f}ms @ 48kHz)
-  
-{channel_info}
-        """
-        self.info_label.setText(info_text.strip())
-        
-        # Update controls
-        self.channels_combo.setCurrentText(str(dev['channels']))
-        if dev['rate'] > 0:
-            self.rate_combo.setCurrentText(str(dev['rate']))
-        self.acp_combo.setCurrentIndex(1 if dev['use_acp'] else 0)
-        self.latency_combo.setCurrentText(str(nearest_buffer))
-        
-        # Create per-channel volume controls
-        get_names = self._get_device_channel_names(dev['description'], direction)
-        self.create_channel_volume_controls(dev['channels'], get_names)
-        
-        # Load saved volume settings
-        self.load_device_volume_settings()
 
     def _get_wpctl_device_id(self, device_name):
         """Find the wpctl device ID for a given device name"""
