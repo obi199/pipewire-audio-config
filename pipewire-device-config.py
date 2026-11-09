@@ -365,8 +365,15 @@ class PipeWireConfigGUI(QMainWindow):
         # Find nearest power of 2
         nearest_buffer = self._nearest_buffer_size(latency_samples)
         
-        # Display channel layout
-        channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
+        # Check for custom channel names for display
+        direction = 'outputs' if dev['media_class'] == 'Audio/Sink' else 'inputs'
+        custom_names = self._get_device_channel_names(dev['description'], direction)
+        
+        # Display channel layout or custom names
+        if custom_names and len(custom_names) == dev['channels']:
+            channel_info = f"Channel Mapping: {', '.join(custom_names)}"
+        else:
+            channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
         
         info_text = f"""
 Device: {dev['description']}
@@ -695,6 +702,14 @@ monitor.alsa.rules = [
             print(f"❌ Error updating buffer size: {e}")
             import traceback
             traceback.print_exc()
+    def _get_device_channel_names(self, device_description, direction='outputs'):
+        """Get custom channel names for known devices like Babyface Pro"""
+        # Check if this device has custom naming
+        for device_key, device_config in DEVICE_CHANNEL_NAMES.items():
+            if device_key.lower() in device_description.lower():
+                return device_config['layout'].get(direction, [])
+        return None
+
     def toggle_master_mute(self, checked):
         """Toggle master mute"""
         if checked:
