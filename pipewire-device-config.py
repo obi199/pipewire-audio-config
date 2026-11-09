@@ -462,20 +462,6 @@ Current Settings:
         
         position = position_map.get(channels, '[ "FL", "FR" ]')
         
-        # Collect per-channel volume and mute settings
-        channel_volumes = []
-        channel_mutes = []
-        for i in range(channels):
-            channel_id = f"ch_{i}"
-            volume = self.channel_sliders.get(channel_id, {}).value() if channel_id in self.channel_sliders else 100
-            muted = self.channel_mute_buttons.get(channel_id, {}).isChecked() if channel_id in self.channel_mute_buttons else False
-            channel_volumes.append(volume)
-            channel_mutes.append("true" if muted else "false")
-        
-        # Format volumes and mutes for config
-        volumes_str = "[ " + ", ".join(str(v) for v in channel_volumes) + " ]"
-        mutes_str = "[ " + ", ".join(channel_mutes) + " ]"
-        
         # Create config file content with volume/mute info
         config_content = f"""# PipeWire Audio Device Configuration
 # Device: {self.current_device['description']}
@@ -670,19 +656,6 @@ monitor.alsa.rules = [
                 16: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "FLC", "FRC", "RC", "SL", "SR", "TC", "TFL", "TFR", "TRL", "TRR" ]',
             }
             position = position_map.get(channels, '[ "FL", "FR" ]')
-            
-            # Collect per-channel volume and mute settings
-            channel_volumes = []
-            channel_mutes = []
-            for i in range(channels):
-                channel_id = f"ch_{i}"
-                volume = self.channel_sliders.get(channel_id, {}).value() if channel_id in self.channel_sliders else 100
-                muted = self.channel_mute_buttons.get(channel_id, {}).isChecked() if channel_id in self.channel_mute_buttons else False
-                channel_volumes.append(volume)
-                channel_mutes.append("true" if muted else "false")
-            
-            volumes_str = "[ " + ", ".join(str(v) for v in channel_volumes) + " ]"
-            mutes_str = "[ " + ", ".join(channel_mutes) + " ]"
             
             # Create config file (same format as save_profile)
             config_content = f"""# PipeWire Audio Device Configuration
