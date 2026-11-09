@@ -322,6 +322,16 @@ class PipeWireConfigGUI(QMainWindow):
             pct_label.setStyleSheet("font-size: 10px;")
             column.addWidget(pct_label)
             
+            # Mute button
+            mute_btn = QPushButton("M")
+            mute_btn.setCheckable(True)
+            mute_btn.setMaximumWidth(30)
+            mute_btn.setMaximumHeight(25)
+            mute_btn.setStyleSheet("font-size: 9px; font-weight: bold;")
+            mute_btn.setToolTip(f"Mute {label_text}")
+            mute_btn.clicked.connect(lambda checked, key=control_key, sl=slider: self.on_fader_mute_toggled(key, checked, sl))
+            column.addWidget(mute_btn, alignment=Qt.AlignCenter)
+            
             sliders_dict[control_key] = slider
             labels_dict[control_key] = pct_label
             
@@ -1034,6 +1044,24 @@ monitor.alsa.rules = [
                         self.adat_sliders[key].blockSignals(True)
                         self.adat_sliders[key].setValue(value)
                         self.adat_sliders[key].blockSignals(False)
+
+    def on_fader_mute_toggled(self, control_key, checked, slider):
+        """Toggle mute for individual fader"""
+        if checked:
+            # Store current value and set to 0 (mute)
+            if 'fader_mutes' not in self.input_mute_controls:
+                self.input_mute_controls['fader_mutes'] = {}
+            self.input_mute_controls['fader_mutes'][control_key] = slider.value()
+            slider.blockSignals(True)
+            slider.setValue(0)
+            slider.blockSignals(False)
+        else:
+            # Restore stored value
+            if 'fader_mutes' in self.input_mute_controls and control_key in self.input_mute_controls['fader_mutes']:
+                stored_value = self.input_mute_controls['fader_mutes'][control_key]
+                slider.blockSignals(True)
+                slider.setValue(stored_value)
+                slider.blockSignals(False)
 
     def on_master_volume_changed(self, value):
         """Handle master volume slider change"""
