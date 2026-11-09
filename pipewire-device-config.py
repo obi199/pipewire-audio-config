@@ -214,6 +214,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.latency_combo = QComboBox()
         self.latency_combo.addItems(['32', '64', '128', '256', '512', '1024', '2048', '4096'])
         self.latency_combo.setCurrentText('256')
+        self.latency_combo.setToolTip("Smaller = lower latency but more CPU load\nLarger = higher latency but more stable\n\nNote: Changes require WirePlumber restart")
         latency_layout.addWidget(self.latency_combo)
         latency_layout.addStretch()
         config_layout.addLayout(latency_layout)
@@ -226,6 +227,16 @@ class PipeWireConfigGUI(QMainWindow):
         acp_layout.addWidget(self.acp_combo)
         acp_layout.addStretch()
         config_layout.addLayout(acp_layout)
+        
+        # Info box about buffer size and device changes
+        info_text = QLabel(
+            "📝 Note: Buffer size changes require WirePlumber restart to take effect.\n"
+            "Use: systemctl --user restart wireplumber\n"
+            "Volume & mute changes take effect immediately."
+        )
+        info_text.setStyleSheet("background-color: #e8f4f8; padding: 10px; border-radius: 5px;")
+        info_text.setWordWrap(True)
+        config_layout.addWidget(info_text)
 
         config_group.setLayout(config_layout)
         layout.addWidget(config_group)
@@ -425,14 +436,17 @@ Current Settings:
         latency_ms = buffer_size / sample_rate * 1000
         
         QMessageBox.information(
-            self, "Configuration Applied",
+            self, "Configuration Changes",
             f"Applied to: {self.current_device['description']}\n\n"
             f"Channels: {channels}\n"
             f"Sample Rate: {sample_rate} Hz\n"
             f"Buffer Size: {buffer_size} samples ({latency_ms:.2f}ms)\n"
             f"ACP Mode: {'Enabled' if use_acp else 'Disabled'}\n\n"
-            "Note: Restart PipeWire or reconnect device for changes to take effect.\n"
-            "systemctl --user restart wireplumber"
+            f"IMPORTANT - Buffer Size Changes:\n"
+            f"To apply buffer size changes, restart WirePlumber:\n\n"
+            f"  systemctl --user restart wireplumber\n\n"
+            f"Or use 'Save as Profile' then restart PipeWire.\n"
+            f"Volume changes take effect immediately."
         )
 
     def save_profile(self):
@@ -543,8 +557,10 @@ monitor.alsa.rules = [
                 self, "Profile Saved",
                 f"Configuration saved to:\n{config_file}\n\n"
                 f"Volume settings saved to:\n{volume_file}\n\n"
-                "Restart WirePlumber for changes to take effect:\n"
-                "systemctl --user restart wireplumber"
+                f"IMPORTANT - Buffer Size Changes:\n"
+                f"To apply buffer size and other device changes:\n\n"
+                f"  systemctl --user restart wireplumber\n\n"
+                f"Note: Volume and mute changes take effect immediately."
             )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save profile: {str(e)}")
