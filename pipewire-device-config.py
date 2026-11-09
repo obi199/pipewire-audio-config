@@ -89,6 +89,20 @@ class DeviceDetector(QThread):
         devices = []
         try:
             data = json.loads(pw_dump_output)
+            
+            # Get PipeWire core default sample rate
+            default_rate = 48000
+            for obj in data:
+                if obj.get('type') == 'PipeWire:Interface:Core':
+                    props = obj.get('info', {}).get('props', {})
+                    # Try to get default clock rate
+                    core_rate = props.get('default.clock.rate')
+                    if core_rate:
+                        try:
+                            default_rate = int(core_rate)
+                        except (ValueError, TypeError):
+                            default_rate = 48000
+            
             for obj in data:
                 if obj.get('type') == 'PipeWire:Interface:Node' and obj.get('version') == 3:
                     props = obj.get('info', {}).get('props', {})
@@ -101,13 +115,18 @@ class DeviceDetector(QThread):
                     if media_class not in ['Audio/Sink', 'Audio/Source']:
                         continue
 
+                    # Use device rate if set, otherwise use PipeWire default
+                    device_rate = props.get('audio.rate', 0)
+                    if device_rate == 0:
+                        device_rate = default_rate
+
                     device = {
                         'id': obj.get('id'),
                         'name': props.get('node.name', 'Unknown'),
                         'description': props.get('node.description', 'Unknown'),
                         'media_class': media_class,
                         'channels': props.get('audio.channels', 0),
-                        'rate': props.get('audio.rate', 0),
+                        'rate': device_rate,
                         'alsa_path': props.get('api.alsa.path', ''),
                         'use_acp': props.get('api.alsa.use-acp', False),
                         'position': props.get('audio.position', []),
