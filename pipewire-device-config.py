@@ -365,15 +365,8 @@ class PipeWireConfigGUI(QMainWindow):
         # Find nearest power of 2
         nearest_buffer = self._nearest_buffer_size(latency_samples)
         
-        # Check for custom channel names
-        custom_names = self._get_device_channel_names(dev['description'])
-        direction = 'outputs' if dev['media_class'] == 'Audio/Sink' else 'inputs'
-        
-        # Only show channel layout if no custom names available
-        if custom_names and len(custom_names) == dev['channels']:
-            channel_info = f"Channel Mapping: {', '.join(custom_names)}"
-        else:
-            channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
+        # Display channel layout
+        channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
         
         info_text = f"""
 Device: {dev['description']}
