@@ -10,6 +10,7 @@ import sys
 import json
 import subprocess
 import re
+import time
 from pathlib import Path
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -288,6 +289,9 @@ class PipeWireConfigGUI(QMainWindow):
         
         # Connect master volume slider
         self.master_volume_slider.valueChanged.connect(self.on_master_volume_changed)
+        
+        # Connect buffer size combo for immediate config update
+        self.latency_combo.currentTextChanged.connect(self.on_buffer_size_changed)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -303,6 +307,13 @@ class PipeWireConfigGUI(QMainWindow):
         reset_btn = QPushButton("Reset to Default")
         reset_btn.clicked.connect(self.reset_device)
         button_layout.addWidget(reset_btn)
+        
+        button_layout.addStretch()
+        
+        restart_btn = QPushButton("Restart WirePlumber")
+        restart_btn.setStyleSheet("background-color: #fff3cd; font-weight: bold;")
+        restart_btn.clicked.connect(self.restart_wireplumber)
+        button_layout.addWidget(restart_btn)
         
         layout.addLayout(button_layout)
 
@@ -592,6 +603,102 @@ monitor.alsa.rules = [
                 "systemctl --user restart wireplumber"
             )
 
+
+    def restart_wireplumber(self):
+        """Restart WirePlumber service"""
+        reply = QMessageBox.question(
+            self, "Restart WirePlumber",
+            "This will restart the WirePlumber service.\n\n"
+            "Audio may temporarily stop and reconnect.\n"
+            "This is needed to apply buffer size and device changes.\n\n"
+            "Continue?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.No:
+            return
+        
+        try:
+            # Show a progress message
+            progress_msg = QMessageBox(self)
+            progress_msg.setWindowTitle("Restarting WirePlumber")
+            progress_msg.setText("Restarting WirePlumber service...\n\nPlease wait...")
+            progress_msg.setStandardButtons(QMessageBox.NoButton)
+            progress_msg.show()
+            
+            # Restart WirePlumber
+            result = subprocess.run(
+                ['systemctl', '--user', 'restart', 'wireplumber'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            progress_msg.close()
+            
+            if result.returncode == 0:
+                # Wait for service to fully restart
+                time.sleep(2)
+                
+                QMessageBox.information(
+                    self, "Success",
+                    "WirePlumber has been restarted successfully!\n\n"
+                    "✅ Buffer size changes applied\n"
+                    "✅ Device configuration updated\n"
+                    "✅ Audio reconnected\n\n"
+                    "Refresh the device list to see updated settings."
+                )
+                
+                # Automatically refresh devices
+                self.load_devices()
+            else:
+                QMessageBox.critical(
+                    self, "Error",
+                    f"Failed to restart WirePlumber:\n\n{result.stderr}"
+                )
+        except subprocess.TimeoutExpired:
+            QMessageBox.critical(
+                self, "Error",
+                "Restart command timed out.\n\n"
+                "Try manually: systemctl --user restart wireplumber"
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self, "Error",
+                f"Failed to restart WirePlumber:\n\n{str(e)}"
+            )
+
+    def on_buffer_size_changed(self, value):
+        """Handle buffer size change - write config immediately"""
+        if not self.current_device:
+            return
+        
+        try:
+            # Get current settings
+            buffer_size = int(value)
+            sample_rate = self.current_device.get('rate', 48000)
+            
+            # Generate and save config immediately
+            config_content = self._generate_wireplumber_config(
+                self.current_device,
+                int(self.channels_combo.currentText()),
+                int(self.rate_combo.currentText()),
+                self.acp_combo.currentIndex(),
+                buffer_size
+            )
+            
+            # Save config file
+            config_file = self._get_config_file_path(self.current_device)
+            config_file.parent.mkdir(parents=True, exist_ok=True)
+            config_file.write_text(config_content)
+            
+            # Show a brief notification about pending restart
+            print(f"Buffer size updated to {buffer_size} samples")
+            print(f"Config saved to {config_file}")
+            print("Restart WirePlumber to apply changes")
+            
+        except Exception as e:
+            print(f"Error updating buffer size: {e}")
     def load_device_volume_settings(self):
         """Load previously saved volume/mute settings for current device"""
         if not self.current_device:
