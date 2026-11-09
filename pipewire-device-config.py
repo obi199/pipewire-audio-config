@@ -260,13 +260,17 @@ class PipeWireConfigGUI(QMainWindow):
         
         volume_layout.addLayout(master_layout)
         
-        # Per-channel volume controls (scrollable)
+        # Per-channel volume controls (horizontal scrollable)
         self.channel_volume_scroll = QScrollArea()
         self.channel_volume_scroll.setWidgetResizable(True)
+        self.channel_volume_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.channel_volume_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.channel_volume_widget = QWidget()
-        self.channel_volume_layout = QVBoxLayout(self.channel_volume_widget)
+        self.channel_volume_layout = QHBoxLayout(self.channel_volume_widget)
+        self.channel_volume_layout.setSpacing(10)
         self.channel_volume_scroll.setWidget(self.channel_volume_widget)
-        self.channel_volume_scroll.setMaximumHeight(200)
+        self.channel_volume_scroll.setMaximumHeight(150)
+        self.channel_volume_scroll.setMinimumHeight(120)
         
         volume_layout.addWidget(QLabel("Per-Channel Volume:"))
         volume_layout.addWidget(self.channel_volume_scroll)
@@ -904,26 +908,34 @@ monitor.alsa.rules = [
             if channel_names and i < len(channel_names):
                 ch_name = channel_names[i]
             else:
-                ch_name = f"Channel {i + 1}"
+                ch_name = f"Ch {i + 1}"
             
-            # Create channel control layout
-            ch_layout = QHBoxLayout()
+            # Create vertical column for this channel
+            ch_layout = QVBoxLayout()
+            ch_layout.setContentsMargins(5, 5, 5, 5)
+            ch_layout.setSpacing(5)
             
             # Channel label
-            ch_layout.addWidget(QLabel(ch_name))
+            label = QLabel(ch_name)
+            label.setStyleSheet("font-weight: bold; font-size: 10px;")
+            label.setAlignment(Qt.AlignCenter)
+            ch_layout.addWidget(label)
             
-            # Volume slider
-            slider = QSlider(Qt.Horizontal)
+            # Volume slider (vertical)
+            slider = QSlider(Qt.Vertical)
             slider.setRange(0, 100)
             slider.setValue(100)
-            slider.setTickPosition(QSlider.TicksBelow)
+            slider.setTickPosition(QSlider.TicksLeft)
             slider.setTickInterval(10)
-            slider.setMaximumWidth(150)
-            ch_layout.addWidget(slider)
+            slider.setMaximumHeight(120)
+            slider.setMinimumWidth(40)
+            ch_layout.addWidget(slider, alignment=Qt.AlignHCenter)
             self.channel_sliders[channel_id] = slider
             
             # Volume percentage label
             vol_label = QLabel("100%")
+            vol_label.setStyleSheet("font-size: 9px;")
+            vol_label.setAlignment(Qt.AlignCenter)
             vol_label.setMinimumWidth(35)
             ch_layout.addWidget(vol_label)
             self.channel_volume_labels[channel_id] = vol_label
@@ -937,21 +949,23 @@ monitor.alsa.rules = [
             )
             
             # Mute button
-            mute_btn = QPushButton("🔊 Unmuted")
+            mute_btn = QPushButton("🔊")
             mute_btn.setCheckable(True)
-            mute_btn.setMaximumWidth(120)
+            mute_btn.setMaximumWidth(45)
+            mute_btn.setMaximumHeight(30)
+            mute_btn.setStyleSheet("font-size: 11px; padding: 2px;")
             mute_btn.clicked.connect(
                 lambda checked, btn_ref=mute_btn: self.toggle_channel_mute(checked, btn_ref)
             )
-            ch_layout.addWidget(mute_btn)
+            ch_layout.addWidget(mute_btn, alignment=Qt.AlignHCenter)
             self.channel_mute_buttons[channel_id] = mute_btn
             
             ch_layout.addStretch()
             
-            # Add to main layout
+            # Add to main horizontal layout
             self.channel_volume_layout.addLayout(ch_layout)
         
-        # Add stretch at the end
+        # Add stretch at the end for horizontal spacing
         self.channel_volume_layout.addStretch()
 
     def toggle_channel_mute(self, checked, button):
