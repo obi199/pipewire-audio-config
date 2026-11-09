@@ -146,6 +146,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.devices = []
         self.current_device = None
         self.config_dir = Path.home() / '.config' / 'wireplumber' / 'wireplumber.conf.d'
+        self.is_restarting = False  # Prevent multiple restart attempts
         
         self.init_ui()
         self.load_devices()
@@ -425,7 +426,10 @@ Current Settings:
         if dev['rate'] > 0:
             self.rate_combo.setCurrentText(str(dev['rate']))
         self.acp_combo.setCurrentIndex(1 if dev['use_acp'] else 0)
+        # Block buffer size signal during update to prevent triggering save
+        self.latency_combo.blockSignals(True)
         self.latency_combo.setCurrentText(str(nearest_buffer))
+        self.latency_combo.blockSignals(False)
         
         # Create per-channel volume controls
         get_names = self._get_device_channel_names(dev['description'], direction)
@@ -618,6 +622,13 @@ monitor.alsa.rules = [
         if reply == QMessageBox.No:
             return
         
+        # Prevent multiple simultaneous restart attempts
+        if self.is_restarting:
+            QMessageBox.warning(self, "Warning", "WirePlumber restart already in progress...")
+            return
+        
+        self.is_restarting = True
+        
         try:
             # Show a progress message
             progress_msg = QMessageBox(self)
@@ -668,6 +679,10 @@ monitor.alsa.rules = [
                 f"Failed to restart WirePlumber:\n\n{str(e)}"
             )
 
+        finally:
+            # Always reset the restart flag
+            self.is_restarting = False
+        
     def on_buffer_size_changed(self, value):
         """Handle buffer size change - write config immediately"""
         if not self.current_device:
