@@ -210,6 +210,54 @@ class PipeWireConfigGUI(QMainWindow):
         config_group.setLayout(config_layout)
         layout.addWidget(config_group)
 
+        # Volume & Mute Controls
+        volume_group = QGroupBox("Volume & Mute")
+        volume_layout = QVBoxLayout()
+
+        # Master volume
+        master_layout = QHBoxLayout()
+        master_layout.addWidget(QLabel("Master Volume:"))
+        self.master_volume_slider = QSlider(Qt.Horizontal)
+        self.master_volume_slider.setRange(0, 100)
+        self.master_volume_slider.setValue(100)
+        self.master_volume_slider.setTickPosition(QSlider.TicksBelow)
+        self.master_volume_slider.setTickInterval(10)
+        master_layout.addWidget(self.master_volume_slider)
+        
+        self.master_volume_label = QLabel("100%")
+        self.master_volume_label.setMinimumWidth(40)
+        master_layout.addWidget(self.master_volume_label)
+        
+        self.master_mute_btn = QPushButton("🔊 Unmuted")
+        self.master_mute_btn.setCheckable(True)
+        self.master_mute_btn.setMaximumWidth(120)
+        self.master_mute_btn.clicked.connect(self.toggle_master_mute)
+        master_layout.addWidget(self.master_mute_btn)
+        
+        volume_layout.addLayout(master_layout)
+        
+        # Per-channel volume controls (scrollable)
+        self.channel_volume_scroll = QScrollArea()
+        self.channel_volume_scroll.setWidgetResizable(True)
+        self.channel_volume_widget = QWidget()
+        self.channel_volume_layout = QVBoxLayout(self.channel_volume_widget)
+        self.channel_volume_scroll.setWidget(self.channel_volume_widget)
+        self.channel_volume_scroll.setMaximumHeight(200)
+        
+        volume_layout.addWidget(QLabel("Per-Channel Volume:"))
+        volume_layout.addWidget(self.channel_volume_scroll)
+        
+        volume_group.setLayout(volume_layout)
+        layout.addWidget(volume_group)
+        
+        # Store references for per-channel controls
+        self.channel_sliders = {}
+        self.channel_mute_buttons = {}
+        self.channel_volume_labels = {}
+        
+        # Connect master volume slider
+        self.master_volume_slider.valueChanged.connect(self.on_master_volume_changed)
+
         # Buttons
         button_layout = QHBoxLayout()
         
@@ -380,11 +428,27 @@ Current Settings:
         
         position = position_map.get(channels, '[ "FL", "FR" ]')
         
-        # Create config file content
+        # Collect per-channel volume and mute settings
+        channel_volumes = []
+        channel_mutes = []
+        for i in range(channels):
+            channel_id = f"ch_{i}"
+            volume = self.channel_sliders.get(channel_id, {}).value() if channel_id in self.channel_sliders else 100
+            muted = self.channel_mute_buttons.get(channel_id, {}).isChecked() if channel_id in self.channel_mute_buttons else False
+            channel_volumes.append(volume)
+            channel_mutes.append("true" if muted else "false")
+        
+        # Format volumes and mutes for config
+        volumes_str = "[ " + ", ".join(str(v) for v in channel_volumes) + " ]"
+        mutes_str = "[ " + ", ".join(channel_mutes) + " ]"
+        
+        # Create config file content with volume/mute info
         config_content = f"""# PipeWire Audio Device Configuration
 # Device: {self.current_device['description']}
 # Auto-generated configuration
 # Buffer Size: {buffer_size} samples ({buffer_size/sample_rate*1000:.2f}ms @ {sample_rate}Hz)
+# Master Volume: {self.master_volume_slider.value()}%
+# Master Mute: {"true" if self.master_mute_btn.isChecked() else "false"}
 
 monitor.alsa.rules = [
   {{
@@ -399,6 +463,11 @@ monitor.alsa.rules = [
         audio.channels = {channels}
         audio.position = {position}
         latency.internal.ns = {latency_ns}
+        # Volume and mute settings
+        # Master volume: 0-100%
+        # Master mute: true/false
+        # Per-channel volumes: {volumes_str}
+        # Per-channel mutes: {mutes_str}
       }}
     }}
   }}
@@ -415,9 +484,24 @@ monitor.alsa.rules = [
         # Write config
         try:
             config_file.write_text(config_content)
+            
+            # Also create a separate JSON file for volume settings (easier to load)
+            import json
+            volume_config = {
+                'device': self.current_device['description'],
+                'master_volume': self.master_volume_slider.value(),
+                'master_muted': self.master_mute_btn.isChecked(),
+                'channel_volumes': channel_volumes,
+                'channel_mutes': channel_mutes
+            }
+            volume_file = self.config_dir / f'volume-{device_short}.json'
+            with open(volume_file, 'w') as f:
+                json.dump(volume_config, f, indent=2)
+            
             QMessageBox.information(
                 self, "Profile Saved",
                 f"Configuration saved to:\n{config_file}\n\n"
+                f"Volume settings saved to:\n{volume_file}\n\n"
                 "Restart WirePlumber for changes to take effect:\n"
                 "systemctl --user restart wireplumber"
             )
@@ -450,6 +534,217 @@ monitor.alsa.rules = [
                 "Restart WirePlumber for changes to take effect:\n"
                 "systemctl --user restart wireplumber"
             )
+
+    def load_device_volume_settings(self):
+        """Load previously saved volume/mute settings for current device"""
+        if not self.current_device:
+            return
+        
+        try:
+            import json
+            device_short = self.current_device['description'].replace(' ', '-')[:20]
+            volume_file = self.config_dir / f'volume-{device_short}.json'
+            
+            if not volume_file.exists():
+                return
+            
+            with open(volume_file, 'r') as f:
+                volume_config = json.load(f)
+            
+            # Load master volume and mute
+            master_vol = volume_config.get('master_volume', 100)
+            master_muted = volume_config.get('master_muted', False)
+            
+            # Update master controls without triggering signals initially
+            self.master_volume_slider.blockSignals(True)
+            self.master_mute_btn.blockSignals(True)
+            
+            self.master_volume_slider.setValue(master_vol)
+            self.master_mute_btn.setChecked(master_muted)
+            self.on_master_volume_changed(master_vol)
+            
+            if master_muted:
+                self.toggle_master_mute(True)
+            
+            self.master_volume_slider.blockSignals(False)
+            self.master_mute_btn.blockSignals(False)
+            
+            # Load per-channel settings
+            channel_volumes = volume_config.get('channel_volumes', [])
+            channel_mutes = volume_config.get('channel_mutes', [])
+            
+            for i, (volume, muted) in enumerate(zip(channel_volumes, channel_mutes)):
+                channel_id = f"ch_{i}"
+                
+                if channel_id in self.channel_sliders:
+                    self.channel_sliders[channel_id].blockSignals(True)
+                    self.channel_sliders[channel_id].setValue(volume)
+                    self.channel_sliders[channel_id].blockSignals(False)
+                
+                if channel_id in self.channel_mute_buttons:
+                    self.channel_mute_buttons[channel_id].blockSignals(True)
+                    self.channel_mute_buttons[channel_id].setChecked(muted)
+                    if muted:
+                        self.channel_mute_buttons[channel_id].setText("🔇 Muted")
+                        self.channel_mute_buttons[channel_id].setStyleSheet("background-color: #ffcccc;")
+                    self.channel_mute_buttons[channel_id].blockSignals(False)
+        
+        except Exception as e:
+            print(f"Warning: Could not load volume settings: {e}")
+
+    def on_master_volume_changed(self, value):
+
+        """Handle master volume slider change"""
+        self.master_volume_label.setText(f"{value}%")
+        
+        # Update all channel sliders to master volume
+        for channel_id, slider in self.channel_sliders.items():
+            slider.setValue(value)
+
+    def toggle_master_mute(self, checked):
+        """Toggle master mute for all channels"""
+        if checked:
+            self.master_mute_btn.setText("🔇 Muted")
+            self.master_mute_btn.setStyleSheet("background-color: #ffcccc;")
+            # Mute all channels
+            for channel_id, btn in self.channel_mute_buttons.items():
+                btn.setChecked(True)
+                btn.setText("🔇 Muted")
+                btn.setStyleSheet("background-color: #ffcccc;")
+        else:
+            self.master_mute_btn.setText("🔊 Unmuted")
+            self.master_mute_btn.setStyleSheet("")
+            # Unmute all channels
+            for channel_id, btn in self.channel_mute_buttons.items():
+                btn.setChecked(False)
+                btn.setText("🔊 Unmuted")
+                btn.setStyleSheet("")
+
+    def create_channel_volume_controls(self, num_channels, channel_names=None):
+        """Create per-channel volume sliders and mute buttons"""
+        # Clear existing controls
+        while self.channel_volume_layout.count():
+            self.channel_volume_layout.takeAt(0).widget().deleteLater()
+        
+        self.channel_sliders.clear()
+        self.channel_mute_buttons.clear()
+        self.channel_volume_labels.clear()
+        
+        if num_channels <= 0:
+            return
+        
+        for i in range(num_channels):
+            channel_id = f"ch_{i}"
+            
+            # Get channel name
+            if channel_names and i < len(channel_names):
+                ch_name = channel_names[i]
+            else:
+                ch_name = f"Channel {i + 1}"
+            
+            # Create channel control layout
+            ch_layout = QHBoxLayout()
+            
+            # Channel label
+            ch_layout.addWidget(QLabel(ch_name))
+            
+            # Volume slider
+            slider = QSlider(Qt.Horizontal)
+            slider.setRange(0, 100)
+            slider.setValue(100)
+            slider.setTickPosition(QSlider.TicksBelow)
+            slider.setTickInterval(10)
+            slider.setMaximumWidth(150)
+            ch_layout.addWidget(slider)
+            self.channel_sliders[channel_id] = slider
+            
+            # Volume percentage label
+            vol_label = QLabel("100%")
+            vol_label.setMinimumWidth(35)
+            ch_layout.addWidget(vol_label)
+            self.channel_volume_labels[channel_id] = vol_label
+            
+            # Connect slider to update label
+            slider.valueChanged.connect(
+                lambda value, label=vol_label: label.setText(f"{value}%")
+            )
+            
+            # Mute button
+            mute_btn = QPushButton("🔊 Unmuted")
+            mute_btn.setCheckable(True)
+            mute_btn.setMaximumWidth(120)
+            mute_btn.clicked.connect(
+                lambda checked, btn_ref=mute_btn: self.toggle_channel_mute(checked, btn_ref)
+            )
+            ch_layout.addWidget(mute_btn)
+            self.channel_mute_buttons[channel_id] = mute_btn
+            
+            ch_layout.addStretch()
+            
+            # Add to main layout
+            self.channel_volume_layout.addLayout(ch_layout)
+        
+        # Add stretch at the end
+        self.channel_volume_layout.addStretch()
+
+    def toggle_channel_mute(self, checked, button):
+        """Toggle mute for individual channel"""
+        if checked:
+            button.setText("🔇 Muted")
+            button.setStyleSheet("background-color: #ffcccc;")
+        else:
+            button.setText("🔊 Unmuted")
+            button.setStyleSheet("")
+
+    def update_device_info(self):
+        """Update device information display"""
+        if not self.current_device:
+            return
+        
+        dev = self.current_device
+        # Convert nanoseconds to samples (assuming 48kHz as reference)
+        latency_samples = int(dev['latency_ns'] / 1000000 * 48 / 1000) if dev['latency_ns'] > 0 else 256
+        # Find nearest power of 2
+        nearest_buffer = self._nearest_buffer_size(latency_samples)
+        
+        # Check for custom channel names
+        custom_names = self._get_device_channel_names(dev['description'])
+        direction = 'outputs' if dev['media_class'] == 'Audio/Sink' else 'inputs'
+        
+        # Only show channel layout if no custom names available
+        if custom_names and len(custom_names) == dev['channels']:
+            channel_info = f"Channel Mapping: {', '.join(custom_names)}"
+        else:
+            channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
+        
+        info_text = f"""
+Device: {dev['description']}
+Type: {'Output (Speaker/Headphone)' if dev['media_class'] == 'Audio/Sink' else 'Input (Microphone)'}
+
+Current Settings:
+  Channels: {dev['channels']}
+  Sample Rate: {dev['rate']} Hz
+  ALSA Path: {dev['alsa_path']}
+  ACP Mode: {'Enabled' if dev['use_acp'] else 'Disabled'}
+  Buffer Size: ~{nearest_buffer} samples ({nearest_buffer / 48:.1f}ms @ 48kHz)
+  
+{channel_info}
+        """
+        self.info_label.setText(info_text.strip())
+        
+        # Update controls
+        self.channels_combo.setCurrentText(str(dev['channels']))
+        if dev['rate'] > 0:
+            self.rate_combo.setCurrentText(str(dev['rate']))
+        self.acp_combo.setCurrentIndex(1 if dev['use_acp'] else 0)
+        self.latency_combo.setCurrentText(str(nearest_buffer))
+        
+        # Create per-channel volume controls
+        get_names = self._get_device_channel_names(dev['description'], direction)
+        self.create_channel_volume_controls(dev['channels'], get_names)
+        
+        # Load saved volume settings
+        self.load_device_volume_settings()
 
 
 def main():
