@@ -295,9 +295,11 @@ class PipeWireConfigGUI(QMainWindow):
         custom_names = self._get_device_channel_names(dev['description'])
         direction = 'outputs' if dev['media_class'] == 'Audio/Sink' else 'inputs'
         
-        channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
+        # Only show channel layout if no custom names available
         if custom_names and len(custom_names) == dev['channels']:
-            channel_info += f"\n  Custom Names: {', '.join(custom_names)}"
+            channel_info = f"Channel Mapping: {', '.join(custom_names)}"
+        else:
+            channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
         
         info_text = f"""
 Device: {dev['description']}
