@@ -178,6 +178,17 @@ class PipeWireConfigGUI(QMainWindow):
         layout.addWidget(device_group)
 
         # Device info
+        info_group = QGroupBox("Device Information")
+        info_layout = QVBoxLayout()
+        
+        self.info_label = QLabel()
+        self.info_label.setFont(QFont("Monospace", 9))
+        self.info_label.setWordWrap(True)
+        info_layout.addWidget(self.info_label)
+        
+        info_group.setLayout(info_layout)
+        layout.addWidget(info_group)
+
         # Configuration
         config_group = QGroupBox("Configuration")
         config_layout = QVBoxLayout()
@@ -221,6 +232,15 @@ class PipeWireConfigGUI(QMainWindow):
         config_layout.addLayout(acp_layout)
         
         # Info box about buffer size and device changes
+        info_text = QLabel(
+            "📝 Note: Buffer size changes require WirePlumber restart to take effect.\n"
+            "Use: systemctl --user restart wireplumber\n"
+            "Volume & mute changes take effect immediately."
+        )
+        info_text.setStyleSheet("background-color: #e8f4f8; padding: 10px; border-radius: 5px;")
+        info_text.setWordWrap(True)
+        config_layout.addWidget(info_text)
+
         config_group.setLayout(config_layout)
         layout.addWidget(config_group)
 
@@ -400,6 +420,8 @@ Current Settings:
   
 {channel_info}
         """
+        self.info_label.setText(info_text.strip())
+        
         # Update controls
         self.channels_combo.setCurrentText(str(dev['channels']))
         if dev['rate'] > 0:
