@@ -259,29 +259,11 @@ class PipeWireConfigGUI(QMainWindow):
         master_layout.addWidget(self.master_mute_btn)
         
         volume_layout.addLayout(master_layout)
-        
-        # Per-channel volume controls (horizontal scrollable)
-        self.channel_volume_scroll = QScrollArea()
-        self.channel_volume_scroll.setWidgetResizable(True)
-        self.channel_volume_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.channel_volume_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.channel_volume_widget = QWidget()
-        self.channel_volume_layout = QHBoxLayout(self.channel_volume_widget)
-        self.channel_volume_layout.setSpacing(10)
-        self.channel_volume_scroll.setWidget(self.channel_volume_widget)
-        self.channel_volume_scroll.setMaximumHeight(150)
-        self.channel_volume_scroll.setMinimumHeight(120)
-        
-        volume_layout.addWidget(QLabel("Input Channels:"))
-        volume_layout.addWidget(self.channel_volume_scroll)
+
         
         volume_group.setLayout(volume_layout)
         layout.addWidget(volume_group)
-        
-        # Store references for per-channel controls
-        self.channel_sliders = {}
-        self.channel_mute_buttons = {}
-        self.channel_volume_labels = {}
+
         
         # Connect master volume slider
         self.master_volume_slider.valueChanged.connect(self.on_master_volume_changed)
@@ -367,14 +349,6 @@ class PipeWireConfigGUI(QMainWindow):
         nearest = min(sizes, key=lambda x: abs(x - samples))
         return nearest
 
-    def _get_device_channel_names(self, device_description, direction='outputs'):
-        """Get custom channel names for known devices"""
-        # Check if this device has custom naming
-        for device_key, device_config in DEVICE_CHANNEL_NAMES.items():
-            if device_key.lower() in device_description.lower():
-                return device_config['layout'].get(direction, [])
-        return None
-
     def update_device_info(self):
         """Update device information display"""
         if not self.current_device:
@@ -426,12 +400,7 @@ Current Settings:
         self.latency_combo.setCurrentText(str(nearest_buffer))
         self.latency_combo.blockSignals(False)
         
-        # Create per-channel volume controls
-        get_names = self._get_device_channel_names(dev['description'], direction)
-        self.create_channel_volume_controls(dev['channels'], get_names)
-        
-        # Load saved volume settings
-        self.load_device_volume_settings()
+        # Master volume only (per-channel control not supported in wpctl)
 
     def apply_config(self):
         """Apply configuration changes"""
@@ -766,213 +735,26 @@ monitor.alsa.rules = [
             print(f"❌ Error updating buffer size: {e}")
             import traceback
             traceback.print_exc()
-    def load_device_volume_settings(self):
-        """Load previously saved volume/mute settings for current device"""
-        if not self.current_device:
-            return
-        
-        try:
-            import json
-            device_short = self.current_device['description'].replace(' ', '-')[:20]
-            volume_file = self.config_dir / f'volume-{device_short}.json'
-            
-            if not volume_file.exists():
-                return
-            
-            with open(volume_file, 'r') as f:
-                volume_config = json.load(f)
-            
-            # Load master volume and mute
-            master_vol = volume_config.get('master_volume', 100)
-            master_muted = volume_config.get('master_muted', False)
-            
-            # Update master controls without triggering signals initially
-            self.master_volume_slider.blockSignals(True)
-            self.master_mute_btn.blockSignals(True)
-            
-            self.master_volume_slider.setValue(master_vol)
-            self.master_mute_btn.setChecked(master_muted)
-            self.on_master_volume_changed(master_vol)
-            
-            if master_muted:
-                self.toggle_master_mute(True)
-            
-            self.master_volume_slider.blockSignals(False)
-            self.master_mute_btn.blockSignals(False)
-            
-            # Load per-channel settings
-            channel_volumes = volume_config.get('channel_volumes', [])
-            channel_mutes = volume_config.get('channel_mutes', [])
-            
-            for i, (volume, muted) in enumerate(zip(channel_volumes, channel_mutes)):
-                channel_id = f"ch_{i}"
-                
-                if channel_id in self.channel_sliders:
-                    self.channel_sliders[channel_id].blockSignals(True)
-                    self.channel_sliders[channel_id].setValue(volume)
-                    self.channel_sliders[channel_id].blockSignals(False)
-                
-                if channel_id in self.channel_mute_buttons:
-                    self.channel_mute_buttons[channel_id].blockSignals(True)
-                    # Convert muted to boolean if it's a string from JSON
-                    muted_bool = muted if isinstance(muted, bool) else (muted.lower() == 'true' if isinstance(muted, str) else muted)
-                    self.channel_mute_buttons[channel_id].setChecked(muted_bool)
-                    if muted_bool:
-                        self.channel_mute_buttons[channel_id].setText("🔇 Muted")
-                        self.channel_mute_buttons[channel_id].setStyleSheet("background-color: #ffcccc;")
-                    self.channel_mute_buttons[channel_id].blockSignals(False)
-        
-        except Exception as e:
-            print(f"Warning: Could not load volume settings: {e}")
-
-    def on_master_volume_changed(self, value):
-        """Handle master volume slider change"""
-        self.master_volume_label.setText(f"{value}%")
-        
-        # Update all channel sliders to master volume
-        for channel_id, slider in self.channel_sliders.items():
-            slider.blockSignals(True)
-            slider.setValue(value)
-            slider.blockSignals(False)
-        
-        # Apply volume to PipeWire device
-        if self.current_device:
-            self._apply_volume_to_device(value)
-
     def toggle_master_mute(self, checked):
-        """Toggle master mute for all channels"""
+        """Toggle master mute"""
         if checked:
             self.master_mute_btn.setText("🔇 Muted")
             self.master_mute_btn.setStyleSheet("background-color: #ffcccc;")
-            # Mute all channels
-            for channel_id, btn in self.channel_mute_buttons.items():
-                btn.blockSignals(True)
-                btn.setChecked(True)
-                btn.setText("🔇 Muted")
-                btn.setStyleSheet("background-color: #ffcccc;")
-                btn.blockSignals(False)
         else:
             self.master_mute_btn.setText("🔊 Unmuted")
             self.master_mute_btn.setStyleSheet("")
-            # Unmute all channels
-            for channel_id, btn in self.channel_mute_buttons.items():
-                btn.blockSignals(True)
-                btn.setChecked(False)
-                btn.setText("🔊 Unmuted")
-                btn.setStyleSheet("")
-                btn.blockSignals(False)
         
         # Apply mute to PipeWire device
         if self.current_device:
             self._apply_mute_to_device(checked)
 
-    def create_channel_volume_controls(self, num_channels, channel_names=None):
-        """Create per-channel volume sliders and mute buttons"""
-        # Clear existing controls
-        while self.channel_volume_layout.count():
-            widget = self.channel_volume_layout.takeAt(0).widget()
-            if widget:
-                widget.deleteLater()
+    def on_master_volume_changed(self, value):
+        """Handle master volume slider change"""
+        self.master_volume_label.setText(f"{value}%")
         
-        # Disconnect any existing signals from old sliders/buttons
-        for slider in self.channel_sliders.values():
-            try:
-                slider.valueChanged.disconnect()
-            except:
-                pass
-        
-        for button in self.channel_mute_buttons.values():
-            try:
-                button.clicked.disconnect()
-            except:
-                pass
-        
-        self.channel_sliders.clear()
-        self.channel_mute_buttons.clear()
-        self.channel_volume_labels.clear()
-        
-        if num_channels <= 0:
-            return
-        
-        for i in range(num_channels):
-            channel_id = f"ch_{i}"
-            
-            # Get channel name
-            if channel_names and i < len(channel_names):
-                ch_name = channel_names[i]
-            else:
-                ch_name = f"Ch {i + 1}"
-            
-            # Create vertical column for this channel
-            ch_layout = QVBoxLayout()
-            ch_layout.setContentsMargins(5, 5, 5, 5)
-            ch_layout.setSpacing(5)
-            
-            # Channel label
-            label = QLabel(ch_name)
-            label.setStyleSheet("font-weight: bold; font-size: 10px;")
-            label.setAlignment(Qt.AlignCenter)
-            ch_layout.addWidget(label)
-            
-            # Volume slider (vertical)
-            slider = QSlider(Qt.Vertical)
-            slider.setRange(0, 100)
-            slider.setValue(100)
-            slider.setTickPosition(QSlider.TicksLeft)
-            slider.setTickInterval(10)
-            slider.setMaximumHeight(120)
-            slider.setMinimumWidth(40)
-            ch_layout.addWidget(slider, alignment=Qt.AlignHCenter)
-            self.channel_sliders[channel_id] = slider
-            
-            # Volume percentage label
-            vol_label = QLabel("100%")
-            vol_label.setStyleSheet("font-size: 9px;")
-            vol_label.setAlignment(Qt.AlignCenter)
-            vol_label.setMinimumWidth(35)
-            ch_layout.addWidget(vol_label)
-            self.channel_volume_labels[channel_id] = vol_label
-            
-            # Connect slider to update label and apply volume
-            slider.valueChanged.connect(
-                lambda value, label=vol_label: label.setText(f"{value}%")
-            )
-            slider.valueChanged.connect(
-                lambda value, ch_idx=i: self._apply_channel_volume(ch_idx, value)
-            )
-            
-            # Mute button
-            mute_btn = QPushButton("🔊")
-            mute_btn.setCheckable(True)
-            mute_btn.setMaximumWidth(45)
-            mute_btn.setMaximumHeight(30)
-            mute_btn.setStyleSheet("font-size: 11px; padding: 2px;")
-            mute_btn.clicked.connect(
-                lambda checked, btn_ref=mute_btn, ch_idx=i: self.toggle_channel_mute(checked, btn_ref, ch_idx)
-            )
-            ch_layout.addWidget(mute_btn, alignment=Qt.AlignHCenter)
-            self.channel_mute_buttons[channel_id] = mute_btn
-            
-            ch_layout.addStretch()
-            
-            # Add to main horizontal layout
-            self.channel_volume_layout.addLayout(ch_layout)
-        
-        # Add stretch at the end for horizontal spacing
-        self.channel_volume_layout.addStretch()
-
-    def toggle_channel_mute(self, checked, button, channel_index):
-        """Toggle mute for individual channel"""
-        if checked:
-            button.setText("🔇 Muted")
-            button.setStyleSheet("background-color: #ffcccc;")
-        else:
-            button.setText("🔊 Unmuted")
-            button.setStyleSheet("")
-        
-        # Apply mute to specific channel in PipeWire device
+        # Apply volume to PipeWire device
         if self.current_device:
-            self._apply_channel_mute(channel_index, checked)
+            self._apply_volume_to_device(value)
 
     def _get_wpctl_device_id(self, device_name):
         """Find the wpctl device ID for a given device name"""
@@ -1043,69 +825,6 @@ monitor.alsa.rules = [
                 print(f"Error setting mute: {result.stderr}")
         except Exception as e:
             print(f"Error applying mute: {e}")
-
-    def _apply_channel_volume(self, channel_index, volume_percent):
-        """Apply volume percentage to a specific channel using wpctl"""
-        try:
-            if not self.current_device:
-                return
-            
-            # Get wpctl device ID
-            device_id = self._get_wpctl_device_id(self.current_device['description'])
-            if device_id is None:
-                print(f"Warning: Could not find wpctl ID for {self.current_device['description']}")
-                return
-            
-            # Convert percentage (0-100) to decimal (0.0-1.0)
-            volume_decimal = volume_percent / 100.0
-            
-            # Set volume for specific channel using wpctl
-            # Format: wpctl set-volume <device_id>:<channel> <volume>
-            channel_str = f"{device_id}:{channel_index}"
-            result = subprocess.run(
-                ['wpctl', 'set-volume', channel_str, f'{volume_decimal:.2f}'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            
-            if result.returncode != 0:
-                # Fallback: try without channel index (some devices may not support it)
-                # In that case, it will adjust master volume
-                print(f"Note: Per-channel volume may not be supported for this device")
-        except Exception as e:
-            print(f"Error applying channel volume: {e}")
-
-    def _apply_channel_mute(self, channel_index, mute_state):
-        """Apply mute state to a specific channel using wpctl"""
-        try:
-            if not self.current_device:
-                return
-            
-            # Get wpctl device ID
-            device_id = self._get_wpctl_device_id(self.current_device['description'])
-            if device_id is None:
-                print(f"Warning: Could not find wpctl ID for {self.current_device['description']}")
-                return
-            
-            # Convert boolean to wpctl mute value (1 = muted, 0 = unmuted)
-            mute_value = 1 if mute_state else 0
-            
-            # Set mute for specific channel using wpctl
-            # Format: wpctl set-mute <device_id>:<channel> <mute>
-            channel_str = f"{device_id}:{channel_index}"
-            result = subprocess.run(
-                ['wpctl', 'set-mute', channel_str, str(mute_value)],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            
-            if result.returncode != 0:
-                # Fallback: try without channel index
-                print(f"Note: Per-channel mute may not be supported for this device")
-        except Exception as e:
-            print(f"Error applying channel mute: {e}")
 
     def _apply_volume_to_device(self, volume_percent):
         """Apply volume percentage to the current device (master) using wpctl - DEPRECATED, use _apply_channel_volume instead"""
