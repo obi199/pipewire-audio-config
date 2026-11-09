@@ -2,7 +2,7 @@
 
 **Date:** November 9, 2026  
 **Status:** ✅ COMPLETE - PRODUCTION READY  
-**Version:** 1.1.0
+**Version:** 1.2.0
 
 ---
 
@@ -56,6 +56,7 @@ All core features are implemented, tested, and ready for user distribution.
 - Documented device detection mechanism
 - Explained ACP mode in detail
 - Updated with v1.1.0 features
+- Updated with v1.2.0 changes (read-only channels)
 
 ### Phase 6: Setup & Installation ✅
 - Created automated setup script
@@ -72,6 +73,7 @@ All core features are implemented, tested, and ready for user distribution.
 ### Application Features
 - ✅ Device detection and listing
 - ✅ Device information display with channel mapping
+- ✅ Channels: Read-only display (always uses device's maximum)
 - ✅ Sample rate control (44.1kHz, 48kHz, 88.2kHz, 96kHz, 176.4kHz, 192kHz)
 - ✅ Buffer size control (32-4096 samples)
 - ✅ ACP mode toggle (enabled/disabled)
@@ -83,6 +85,8 @@ All core features are implemented, tested, and ready for user distribution.
 - ✅ Latency calculation and display
 - ✅ Status messages for config saves and restarts
 - ✅ Clean, intuitive UI with proper error handling
+- ✅ Input faders for ADAT and S/PDIF level control
+- ✅ Horizontal scrollable fader layout
 
 ### Setup Features
 - ✅ Automatic system detection
@@ -195,48 +199,41 @@ All core features are implemented, tested, and ready for user distribution.
 ## File Inventory
 
 ### Application Scripts
-- `pipewire-device-config.py` - 924 lines, executable (updated v1.1.0)
+- `pipewire-device-config.py` - 1147 lines, executable (updated v1.2.0)
 - `run-pipewire-config.sh` - Launcher script, executable
 - `setup.sh` - 550+ lines, executable
 - `babyface_channels.py` - Device configuration
 
 ### Documentation
-- `README.md` - 10+ KB (updated v1.1.0)
+- `README.md` - 10+ KB (updated v1.2.0)
 - `SETUP.md` - 10 KB
 - `BUFFER_SIZE_REFERENCE.md` - 2.1 KB
 - `CHANNEL_LAYOUT.md` - 4.1 KB
 - `BABYFACE_PRO_CHANNELS.md` - 4.3 KB
 - `DEVICE_DETECTION.md` - 12 KB
 - `ACP_MODE_EXPLAINED.md` - 7.5 KB
-- `PROJECT_STATUS.md` - This file (updated v1.1.0)
+- `PROJECT_STATUS.md` - This file (updated v1.2.0)
 
 ### Project Files
 - `LICENSE` - MIT License
 - `requirements.txt` - Dependencies
 - `.gitignore` - Git configuration
 
-**Total Project Size:** ~200 KB (updated for v1.1.0)
+**Total Project Size:** ~200 KB (updated for v1.2.0)
 
 ---
 
 ## Git History
 
-Latest commits (v1.1.0 features):
+Latest commits (v1.2.0 features):
 ```
-9aed184 Add signal connection for sample rate changes
-722e215 Add sample rate change functionality to GUI
-f0dc29a Restore custom channel name display for device info
-45cf1cd Remove dead per-channel volume collection code
-23e741a Remove remaining per-channel volume save code
-7f9cd2f Remove per-channel volume controls - keep only master volume
-19ab402 Fix crash: remove call to non-existent _get_device_channel_names method
-9fc2bd8 Revert "Remove per-channel volume controls - keep only master volume"
-58240f9 Remove blocking progress message during WirePlumber restart
-0ef3fb9 Disable restart button during restart to prevent double restart
-...
+4a15fdd Change channels to read-only display (always use device max)
+01dddba Increase fader text size and window width
+038c9bd Adjust fader spacing to fit screen better
+848c930 Align input faders horizontally with horizontal scrolling
 ```
 
-**Total Commits:** 40+  
+**Total Commits:** 45+  
 **Active Development:** Ongoing  
 **Branches:** 1 (main)
 
@@ -253,9 +250,10 @@ f0dc29a Restore custom channel name display for device info
 - Configuration directory setup
 - Verification testing
 
-### ✅ Application (v1.1.0)
+### ✅ Application (v1.2.0)
 - Audio device detection and listing
 - Device information display with custom channel names
+- Channels: Read-only display (always uses device's maximum)
 - Master volume control (0-100%) with real-time wpctl
 - Master mute button with visual feedback
 - Sample rate change (44.1kHz - 192kHz)
@@ -265,6 +263,8 @@ f0dc29a Restore custom channel name display for device info
 - One-click WirePlumber restart
 - Status messages and error handling
 - Auto-save on parameter change
+- Input faders (16 total: 4 S/PDIF + 12 ADAT) with horizontal scrolling
+- Larger text and faders for readability
 
 ### ✅ User Workflow
 - Launch from application menu

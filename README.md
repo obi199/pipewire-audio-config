@@ -5,7 +5,7 @@ A simple graphical tool to configure USB audio devices on PipeWire with support 
 ## Overview
 
 Configure your audio devices without touching configuration files:
-- **Channels**: 2, 4, 6, 8, 12, or 16 channels
+- **Channels**: Automatically uses device's maximum channels (read-only)
 - **Sample Rate**: 44.1kHz to 192kHz  
 - **Buffer Size**: Professional audio sizes (32-4096 samples)
 - **ACP Mode**: Toggle stereo-only vs multi-channel mode
@@ -53,8 +53,9 @@ python3 pipewire-device-config.py
 ### Basic Workflow
 
 1. **Select Device** - Choose an audio device from the dropdown
-2. **View Settings** - Current configuration displayed automatically
+2. **View Settings** - Current configuration displayed automatically (including channel count)
 3. **Configure**:
+    - **Channels**: Displays device's native channel count (read-only)
     - **Sample Rate**: 44.1kHz to 192kHz (dropdown)
     - **Buffer Size**: 32-4096 samples (dropdown)
     - **ACP Mode**: Toggle between full channels and stereo-only
@@ -97,7 +98,8 @@ See `BUFFER_SIZE_REFERENCE.md` for complete table.
 - Stereo (2ch) for basic audio
 - Surround (4-8ch) for gaming/movies
 - Multi-channel (12-16ch) for professional audio and ADAT interfaces
-- **Custom device names**: Displays meaningful channel names for known devices
+- **Automatic channel detection**: Always uses device's maximum channels
+- **Custom device names**: Displays meaningful channel names for known devices (e.g., Babyface Pro shows Main-L/R, ADAT-1-8, S/PDIF-L/R)
 
 ### ACP Mode Toggle
 - **Disabled**: Full device capabilities, multi-channel access
@@ -188,6 +190,7 @@ After changing buffer size or sample rate:
 - Make sure "ACP Mode" is set to "Disabled (Full Channels)"
 - Not all devices support multi-channel in Class Compliant mode
 - Check device documentation for supported channel counts
+- The app uses your device's actual maximum channels - if it shows 2ch, the device is limited to stereo
 
 ## Project Structure
 
@@ -254,7 +257,12 @@ Issues and pull requests welcome!
 
 ## Changelog
 
-### v1.1.0 (2026-11-09) - Current
+### v1.2.0 (2026-11-09) - Current
+- **Changed**: Channels now read-only (always uses device's maximum)
+- **Improved**: Simplified UI by removing manual channel selection
+- **Improved**: Prevents user confusion about channel configuration
+
+### v1.1.0 (2026-11-09)
 - **New**: Sample rate control GUI with auto-config saving
 - **New**: Master volume slider with real-time wpctl integration
 - **New**: Master mute button with visual feedback (🔊/🔇)
