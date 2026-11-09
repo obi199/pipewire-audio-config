@@ -306,10 +306,10 @@ class PipeWireConfigGUI(QMainWindow):
         
         button_layout.addStretch()
         
-        restart_btn = QPushButton("Restart WirePlumber")
-        restart_btn.setStyleSheet("background-color: #fff3cd; font-weight: bold;")
-        restart_btn.clicked.connect(self.restart_wireplumber)
-        button_layout.addWidget(restart_btn)
+        self.restart_btn = QPushButton("Restart WirePlumber")
+        self.restart_btn.setStyleSheet("background-color: #fff3cd; font-weight: bold;")
+        self.restart_btn.clicked.connect(self.restart_wireplumber)
+        button_layout.addWidget(self.restart_btn)
         
         layout.addLayout(button_layout)
 
@@ -624,6 +624,7 @@ monitor.alsa.rules = [
         
         self.is_restarting = True
         self.ignore_buffer_changes = True  # Disable buffer size saves during restart
+        self.restart_btn.setEnabled(False)  # Disable restart button during restart
         
         try:
             # Show a progress message
@@ -658,7 +659,7 @@ monitor.alsa.rules = [
                 
                 # Note: Device refresh handled by user - don't auto-refresh to avoid conflicts
                 # User can manually click device refresh if needed
-                self.ignore_buffer_changes = False
+                pass
             else:
                 QMessageBox.critical(
                     self, "Error",
@@ -680,6 +681,7 @@ monitor.alsa.rules = [
             # Always reset the restart flag
             self.is_restarting = False
             self.ignore_buffer_changes = False
+            self.restart_btn.setEnabled(True)  # Re-enable restart button
         
     def on_buffer_size_changed(self, value):
         """Handle buffer size change - write config immediately"""
