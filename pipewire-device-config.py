@@ -202,9 +202,9 @@ class PipeWireConfigGUI(QMainWindow):
         # Channels
         channels_layout = QHBoxLayout()
         channels_layout.addWidget(QLabel("Channels:"))
-        self.channels_combo = QComboBox()
-        self.channels_combo.addItems(['2', '4', '6', '8', '12', '16'])
-        channels_layout.addWidget(self.channels_combo)
+        self.channels_label = QLabel()
+        self.channels_label.setStyleSheet("padding: 4px;")
+        channels_layout.addWidget(self.channels_label)
         channels_layout.addStretch()
         config_group_layout.addLayout(channels_layout)
 
@@ -492,7 +492,7 @@ Current Settings:
         self.info_label.setText(info_text.strip())
         
         # Update controls
-        self.channels_combo.setCurrentText(str(dev['channels']))
+        self.channels_label.setText(str(dev['channels']))
         if dev['rate'] > 0:
             self.rate_combo.setCurrentText(str(dev['rate']))
         self.acp_combo.setCurrentIndex(1 if dev['use_acp'] else 0)
@@ -517,7 +517,7 @@ Current Settings:
             QMessageBox.warning(self, "Warning", "No device selected")
             return
         
-        channels = int(self.channels_combo.currentText())
+        channels = int(self.channels_label.text())
         sample_rate = int(self.rate_combo.currentText())
         use_acp = self.acp_combo.currentIndex() == 1
         buffer_size = int(self.latency_combo.currentText())
@@ -543,7 +543,7 @@ Current Settings:
             QMessageBox.warning(self, "Warning", "No device selected")
             return
         
-        channels = int(self.channels_combo.currentText())
+        channels = int(self.channels_label.text())
         sample_rate = int(self.rate_combo.currentText())
         use_acp = self.acp_combo.currentIndex() == 1
         buffer_size = int(self.latency_combo.currentText())
@@ -650,7 +650,6 @@ monitor.alsa.rules = [
         
         if reply == QMessageBox.Yes:
             # Reset to default values
-            self.channels_combo.setCurrentText('2')
             self.rate_combo.setCurrentText('48000')
             self.acp_combo.setCurrentIndex(1)  # Enable ACP (stereo)
             self.latency_combo.setCurrentText('256')  # 256 samples default
@@ -741,7 +740,7 @@ monitor.alsa.rules = [
         
         try:
             # Get current settings
-            channels = int(self.channels_combo.currentText())
+            channels = int(self.channels_label.text())
             sample_rate = int(self.rate_combo.currentText())
             use_acp = self.acp_combo.currentIndex() == 1
             buffer_size = int(value)
@@ -811,6 +810,7 @@ monitor.alsa.rules = [
             print(f"❌ Error updating buffer size: {e}")
             import traceback
             traceback.print_exc()
+    
     def _get_device_channel_names(self, device_description, direction='outputs'):
         """Get custom channel names for known devices like Babyface Pro"""
         # Check if this device has custom naming
@@ -826,7 +826,7 @@ monitor.alsa.rules = [
         
         try:
             # Get current settings
-            channels = int(self.channels_combo.currentText())
+            channels = int(self.channels_label.text())
             sample_rate = int(value)
             use_acp = self.acp_combo.currentIndex() == 1
             buffer_size = int(self.latency_combo.currentText())
@@ -906,7 +906,7 @@ monitor.alsa.rules = [
         
         try:
             # Get current settings
-            channels = int(self.channels_combo.currentText())
+            channels = int(self.channels_label.text())
             sample_rate = int(self.rate_combo.currentText())
             use_acp = index == 1
             buffer_size = int(self.latency_combo.currentText())
