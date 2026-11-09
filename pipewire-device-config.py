@@ -147,6 +147,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.current_device = None
         self.config_dir = Path.home() / '.config' / 'wireplumber' / 'wireplumber.conf.d'
         self.is_restarting = False  # Prevent multiple restart attempts
+        self.ignore_buffer_changes = False  # Ignore buffer size changes during restart
         
         self.init_ui()
         self.load_devices()
@@ -628,6 +629,7 @@ monitor.alsa.rules = [
             return
         
         self.is_restarting = True
+        self.ignore_buffer_changes = True  # Disable buffer size saves during restart
         
         try:
             # Show a progress message
@@ -660,8 +662,9 @@ monitor.alsa.rules = [
                     "Refresh the device list to see updated settings."
                 )
                 
-                # Use QTimer to defer device refresh to avoid event loop issues
-                QTimer.singleShot(500, self.load_devices)
+                # Note: Device refresh handled by user - don't auto-refresh to avoid conflicts
+                # User can manually click device refresh if needed
+                self.ignore_buffer_changes = False
             else:
                 QMessageBox.critical(
                     self, "Error",
@@ -682,10 +685,11 @@ monitor.alsa.rules = [
         finally:
             # Always reset the restart flag
             self.is_restarting = False
+            self.ignore_buffer_changes = False
         
     def on_buffer_size_changed(self, value):
         """Handle buffer size change - write config immediately"""
-        if not self.current_device:
+        if not self.current_device or self.ignore_buffer_changes:
             return
         
         try:
