@@ -381,25 +381,7 @@ class PipeWireConfigGUI(QMainWindow):
         custom_names = self._get_device_channel_names(dev['description'])
         direction = 'outputs' if dev['media_class'] == 'Audio/Sink' else 'inputs'
         
-        # Only show channel layout if no custom names available
-        if custom_names and len(custom_names) == dev['channels']:
-            channel_info = f"Channel Mapping: {', '.join(custom_names)}"
-        else:
-            channel_info = f"Channel Layout: {', '.join(dev['position']) if dev['position'] else 'Not specified'}"
-        
-        info_text = f"""
-Device: {dev['description']}
-Type: {'Output (Speaker/Headphone)' if dev['media_class'] == 'Audio/Sink' else 'Input (Microphone)'}
 
-Current Settings:
-  Channels: {dev['channels']}
-  Sample Rate: {dev['rate']} Hz
-  ALSA Path: {dev['alsa_path']}
-  ACP Mode: {'Enabled' if dev['use_acp'] else 'Disabled'}
-  Buffer Size: ~{nearest_buffer} samples ({nearest_buffer / dev['rate'] * 1000:.2f}ms @ {dev['rate']}Hz)
-  
-{channel_info}
-        """
         # Update controls
         self.channels_combo.setCurrentText(str(dev['channels']))
         if dev['rate'] > 0:
