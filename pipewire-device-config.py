@@ -614,17 +614,25 @@ monitor.alsa.rules = [
             self.master_mute_btn.setStyleSheet("background-color: #ffcccc;")
             # Mute all channels
             for channel_id, btn in self.channel_mute_buttons.items():
+                btn.blockSignals(True)
                 btn.setChecked(True)
                 btn.setText("🔇 Muted")
                 btn.setStyleSheet("background-color: #ffcccc;")
+                btn.blockSignals(False)
         else:
             self.master_mute_btn.setText("🔊 Unmuted")
             self.master_mute_btn.setStyleSheet("")
             # Unmute all channels
             for channel_id, btn in self.channel_mute_buttons.items():
+                btn.blockSignals(True)
                 btn.setChecked(False)
                 btn.setText("🔊 Unmuted")
                 btn.setStyleSheet("")
+                btn.blockSignals(False)
+        
+        # Apply mute to PipeWire device
+        if self.current_device:
+            self._apply_mute_to_device(checked)
 
     def create_channel_volume_controls(self, num_channels, channel_names=None):
         """Create per-channel volume sliders and mute buttons"""
