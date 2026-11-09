@@ -50,29 +50,40 @@ python3 pipewire-device-config.py
 
 ## Usage
 
+### Basic Workflow
+
 1. **Select Device** - Choose an audio device from the dropdown
 2. **View Settings** - Current configuration displayed automatically
 3. **Configure**:
-   - Select number of channels
-   - Choose sample rate
-   - Pick buffer size
-   - Toggle ACP mode
-4. **Save Profile** - Creates WirePlumber configuration
-5. **Restart PipeWire** - Changes take effect
+    - **Sample Rate**: 44.1kHz to 192kHz (dropdown)
+    - **Buffer Size**: 32-4096 samples (dropdown)
+    - **ACP Mode**: Toggle between full channels and stereo-only
+4. **Master Volume**: Adjust overall device volume (0-100%) with real-time wpctl control
+5. **Restart WirePlumber**: Click button to apply buffer/sample rate changes
 
-```bash
-systemctl --user restart wireplumber
-```
+### Device Information
+
+The app displays detailed device info including:
+- **Channel Mapping**: Custom names for known devices (Babyface Pro: Main-L/R, ADAT-1-8, S/PDIF-L/R)
+- **Standard Layout**: Generic channel names (FL, FR, FC, etc.) for unknown devices
+- **Sample Rate**: Current device sample rate
+- **ACP Mode**: Whether device is in stereo-only or full-channel mode
 
 ## Features
 
 ### Device Detection
-Automatically finds all ALSA audio devices on your system
+Automatically finds all ALSA audio devices via pw-dump with real-time updates
 
-### Multi-Channel Support
-- Stereo (2ch) for basic audio
-- Surround (4-8ch) for gaming/movies
-- Multi-channel (12-16ch) for professional audio and ADAT interfaces
+### Master Volume Control
+- **Real-time volume adjustment**: 0-100% slider with instant feedback
+- **Mute button**: Toggle 🔊/🔇 with visual red background when muted
+- **wpctl integration**: Changes apply immediately without restart
+
+### Sample Rate Control
+- **Dynamic adjustment**: Change between 44.1kHz to 192kHz
+- **Auto-config**: Saves to WirePlumber config automatically
+- **Latency recalculation**: Updates buffer latency based on sample rate
+- **Supported rates**: 44100, 48000, 88200, 96000, 176400, 192000 Hz
 
 ### Buffer Size Control
 Standard audio buffer sizes (32-4096 samples) with real-time latency calculation:
@@ -82,9 +93,20 @@ Standard audio buffer sizes (32-4096 samples) with real-time latency calculation
 
 See `BUFFER_SIZE_REFERENCE.md` for complete table.
 
+### Multi-Channel Support
+- Stereo (2ch) for basic audio
+- Surround (4-8ch) for gaming/movies
+- Multi-channel (12-16ch) for professional audio and ADAT interfaces
+- **Custom device names**: Displays meaningful channel names for known devices
+
 ### ACP Mode Toggle
 - **Disabled**: Full device capabilities, multi-channel access
 - **Enabled**: Stereo-only mode for compatibility
+
+### One-Click WirePlumber Restart
+- **Restart Button**: Apply buffer size and sample rate changes with one click
+- **Status Messages**: Confirmation when changes are saved
+- **Error Handling**: Gracefully handles restart failures
 
 ### Persistent Configuration
 Saves settings to WirePlumber config files automatically:
@@ -92,17 +114,27 @@ Saves settings to WirePlumber config files automatically:
 ~/.config/wireplumber/wireplumber.conf.d/50-device-*.conf
 ```
 
+Config includes:
+- Sample rate (audio.rate)
+- Buffer size (latency.internal.ns)
+- Channel configuration
+- ACP mode setting
+- Volume settings (for reference)
+
 ## Example: RME Babyface Pro Setup
 
 For 12-channel ADAT operation:
 
-1. Select "Babyface Pro" device
-2. Set Channels: **12**
-3. Set Sample Rate: **48000 Hz**
-4. Set Buffer Size: **256 samples**
-5. Set ACP Mode: **Disabled (Full Channels)**
-6. Click "Save as Profile"
-7. Restart: `systemctl --user restart wireplumber`
+1. **Select Device**: "Babyface Pro (Class Compliant Mode)"
+2. **Adjust Settings**:
+    - Sample Rate: **48000 Hz**
+    - Buffer Size: **256 samples** (5.33ms)
+    - ACP Mode: **Disabled (Full Channels)**
+3. **Set Volume**: Master Volume slider to desired level (or leave at 100%)
+4. **Apply Changes**: Click **"Restart WirePlumber"** button
+5. **Verify**: Device info shows "Channel Mapping: Main-L, Main-R, ADAT-1-8, S/PDIF-L/R"
+
+Changes take effect after restart completes! 🎉
 
 ## Supported Devices
 
@@ -142,10 +174,15 @@ sudo pacman -S python-pyqt5
 ```
 
 ### Changes not applying
-After saving a profile:
-1. Restart WirePlumber: `systemctl --user restart wireplumber`
-2. Reconnect your audio device (unplug/replug or restart)
+After changing buffer size or sample rate:
+1. Click **"Restart WirePlumber"** button in the GUI
+2. Or manually restart: `systemctl --user restart wireplumber`
 3. Check config was created: `ls ~/.config/wireplumber/wireplumber.conf.d/`
+
+### Volume changes not working
+- Make sure wpctl is installed: `which wpctl`
+- Check device ID: `wpctl status`
+- Try restarting PipeWire: `systemctl --user restart wireplumber`
 
 ### Only stereo showing
 - Make sure "ACP Mode" is set to "Disabled (Full Channels)"
@@ -217,8 +254,17 @@ Issues and pull requests welcome!
 
 ## Changelog
 
-### v1.0.0 (2026-11-09)
-- Initial release
+### v1.1.0 (2026-11-09) - Current
+- **New**: Sample rate control GUI with auto-config saving
+- **New**: Master volume slider with real-time wpctl integration
+- **New**: Master mute button with visual feedback (🔊/🔇)
+- **New**: One-click WirePlumber restart button
+- **New**: Custom device channel name display (Babyface Pro support)
+- **Fixed**: Per-channel volume controls removed (not supported by wpctl)
+- **Improved**: Auto-save buffer size and sample rate to WirePlumber config
+- **Improved**: Device information display with channel mapping
+
+### v1.0.0 (2026-11-09) - Initial Release
 - Device detection and configuration
 - Multi-channel support (2-16 channels)
 - Buffer size control (32-4096 samples)

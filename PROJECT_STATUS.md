@@ -2,7 +2,7 @@
 
 **Date:** November 9, 2026  
 **Status:** ✅ COMPLETE - PRODUCTION READY  
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 ---
 
@@ -36,15 +36,28 @@ All core features are implemented, tested, and ready for user distribution.
 - Implemented proper channel display logic
 - Hidden redundant channel names when custom names available
 
-### Phase 3: Documentation ✅
+### Phase 3: Audio Control (NEW) ✅
+- Implemented master volume slider with real-time wpctl control
+- Added master mute button with visual feedback
+- Implemented sample rate change functionality
+- All audio changes auto-save to WirePlumber config
+
+### Phase 4: Device Management (NEW) ✅
+- Added one-click WirePlumber restart button
+- Auto-generated config on buffer/sample rate change
+- Proper error handling and status messages
+- Disables restart button during restart to prevent double-clicks
+
+### Phase 5: Documentation ✅
 - Created comprehensive README.md
 - Added buffer size reference guide
 - Created channel layout documentation
 - Added Babyface Pro specific guide
 - Documented device detection mechanism
 - Explained ACP mode in detail
+- Updated with v1.1.0 features
 
-### Phase 4: Setup & Installation ✅
+### Phase 6: Setup & Installation ✅
 - Created automated setup script
 - Added multi-distro package manager support
 - Implemented dependency checking
@@ -58,16 +71,18 @@ All core features are implemented, tested, and ready for user distribution.
 
 ### Application Features
 - ✅ Device detection and listing
-- ✅ Device information display
-- ✅ Channel selection (2-16 channels)
-- ✅ Sample rate selection (44.1kHz, 48kHz, 96kHz, 192kHz)
+- ✅ Device information display with channel mapping
+- ✅ Sample rate control (44.1kHz, 48kHz, 88.2kHz, 96kHz, 176.4kHz, 192kHz)
 - ✅ Buffer size control (32-4096 samples)
 - ✅ ACP mode toggle (enabled/disabled)
-- ✅ Configuration save to WirePlumber format
-- ✅ Reset to default configuration
-- ✅ Custom channel names display
+- ✅ Master volume slider (0-100%) with real-time wpctl control
+- ✅ Master mute button (🔊/🔇) with visual feedback
+- ✅ One-click WirePlumber restart button
+- ✅ Auto-save configuration to WirePlumber format
+- ✅ Custom channel names display (Babyface Pro: Main-L/R, ADAT-1-8, S/PDIF-L/R)
 - ✅ Latency calculation and display
-- ✅ Clean, intuitive UI
+- ✅ Status messages for config saves and restarts
+- ✅ Clean, intuitive UI with proper error handling
 
 ### Setup Features
 - ✅ Automatic system detection
@@ -180,44 +195,49 @@ All core features are implemented, tested, and ready for user distribution.
 ## File Inventory
 
 ### Application Scripts
-- `pipewire-device-config.py` - 463 lines, executable
+- `pipewire-device-config.py` - 924 lines, executable (updated v1.1.0)
 - `run-pipewire-config.sh` - Launcher script, executable
 - `setup.sh` - 550+ lines, executable
 - `babyface_channels.py` - Device configuration
 
 ### Documentation
-- `README.md` - 5.3 KB
+- `README.md` - 10+ KB (updated v1.1.0)
 - `SETUP.md` - 10 KB
 - `BUFFER_SIZE_REFERENCE.md` - 2.1 KB
 - `CHANNEL_LAYOUT.md` - 4.1 KB
 - `BABYFACE_PRO_CHANNELS.md` - 4.3 KB
 - `DEVICE_DETECTION.md` - 12 KB
 - `ACP_MODE_EXPLAINED.md` - 7.5 KB
-- `PROJECT_STATUS.md` - This file
+- `PROJECT_STATUS.md` - This file (updated v1.1.0)
 
 ### Project Files
 - `LICENSE` - MIT License
 - `requirements.txt` - Dependencies
 - `.gitignore` - Git configuration
 
-**Total Project Size:** ~152 KB (documentation heavy, application minimal)
+**Total Project Size:** ~200 KB (updated for v1.1.0)
 
 ---
 
 ## Git History
 
+Latest commits (v1.1.0 features):
 ```
-ecfa29d Add comprehensive setup script and documentation
-6550949 Hide standard channel names when custom names are available
-d9142fe Add comprehensive device detection documentation
-998b62e Add custom channel naming for RME Babyface Pro
-8e2f727 Add channel layout documentation and standards reference
-3acc0e0 Add quick start guide script
-25c5c03 Initial commit: PipeWire Audio Device Configuration GUI
+9aed184 Add signal connection for sample rate changes
+722e215 Add sample rate change functionality to GUI
+f0dc29a Restore custom channel name display for device info
+45cf1cd Remove dead per-channel volume collection code
+23e741a Remove remaining per-channel volume save code
+7f9cd2f Remove per-channel volume controls - keep only master volume
+19ab402 Fix crash: remove call to non-existent _get_device_channel_names method
+9fc2bd8 Revert "Remove per-channel volume controls - keep only master volume"
+58240f9 Remove blocking progress message during WirePlumber restart
+0ef3fb9 Disable restart button during restart to prevent double restart
+...
 ```
 
-**Total Commits:** 7  
-**Active Development:** 1 day  
+**Total Commits:** 40+  
+**Active Development:** Ongoing  
 **Branches:** 1 (main)
 
 ---
@@ -233,24 +253,27 @@ d9142fe Add comprehensive device detection documentation
 - Configuration directory setup
 - Verification testing
 
-### ✅ Application
+### ✅ Application (v1.1.0)
 - Audio device detection and listing
-- Device information display
-- Channel configuration
-- Sample rate selection
-- Buffer size control
+- Device information display with custom channel names
+- Master volume control (0-100%) with real-time wpctl
+- Master mute button with visual feedback
+- Sample rate change (44.1kHz - 192kHz)
+- Buffer size control (32-4096 samples)
 - ACP mode toggle
 - Configuration file generation
-- Custom channel name display
-- Latency calculation
+- One-click WirePlumber restart
+- Status messages and error handling
+- Auto-save on parameter change
 
 ### ✅ User Workflow
 - Launch from application menu
 - Launch from terminal
 - Configure device settings
-- Save configuration to WirePlumber
+- Adjust volume in real-time
+- Change sample rate and buffer size
+- One-click apply via restart button
 - Get helpful error messages
-- Restart instructions
 - Uninstall capability
 
 ---
@@ -258,16 +281,18 @@ d9142fe Add comprehensive device detection documentation
 ## Known Limitations
 
 ### Current Scope
-- ✗ No channel routing/mixing (not implemented by design)
-- ✗ No real-time device monitoring (devices scanned on launch)
+- ✗ Per-channel volume controls (not supported by wpctl at device level)
+- ✗ Channel routing/mixing (not implemented by design)
+- ✗ Real-time device monitoring (devices scanned on launch)
 - ✗ Single device selection at a time (sufficient for most use cases)
 - ✗ No profile management UI (files managed directly)
 
 ### By Design
-- Audio routing explicitly out of scope
+- Master volume only (per-channel requires complex audio routing)
 - Single-device focus matches typical user needs
 - Configuration via files ensures transparency
 - No complex state management needed
+- Simple, focused interface
 
 ---
 
