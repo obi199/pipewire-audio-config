@@ -15,7 +15,7 @@ from pathlib import Path
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QSpinBox, QSlider, QPushButton, QGroupBox,
-    QMessageBox, QListWidget, QListWidgetItem, QScrollArea
+    QMessageBox, QListWidget, QListWidgetItem, QScrollArea, QTabWidget
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont
@@ -153,15 +153,15 @@ class PipeWireConfigGUI(QMainWindow):
         self.load_devices()
 
     def init_ui(self):
-        """Initialize the GUI"""
+        """Initialize the GUI with tabs"""
         self.setWindowTitle('PipeWire Audio Device Configuration')
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 650)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
 
-        # Device selection
+        # Device selection and info at top (common)
         device_group = QGroupBox("Audio Devices")
         device_layout = QHBoxLayout()
         
@@ -175,7 +175,7 @@ class PipeWireConfigGUI(QMainWindow):
         device_layout.addWidget(refresh_btn)
         
         device_group.setLayout(device_layout)
-        layout.addWidget(device_group)
+        main_layout.addWidget(device_group)
 
         # Device info
         info_group = QGroupBox("Device Information")
@@ -187,11 +187,17 @@ class PipeWireConfigGUI(QMainWindow):
         info_layout.addWidget(self.info_label)
         
         info_group.setLayout(info_layout)
-        layout.addWidget(info_group)
+        main_layout.addWidget(info_group)
 
-        # Configuration
-        config_group = QGroupBox("Configuration")
+        # Tabs for different control panels
+        self.tabs = QTabWidget()
+        
+        # Tab 1: Configuration
+        config_tab = QWidget()
         config_layout = QVBoxLayout()
+        
+        config_group = QGroupBox("Device Configuration")
+        config_group_layout = QVBoxLayout()
 
         # Channels
         channels_layout = QHBoxLayout()
@@ -200,7 +206,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.channels_combo.addItems(['2', '4', '6', '8', '12', '16'])
         channels_layout.addWidget(self.channels_combo)
         channels_layout.addStretch()
-        config_layout.addLayout(channels_layout)
+        config_group_layout.addLayout(channels_layout)
 
         # Sample Rate
         rate_layout = QHBoxLayout()
@@ -209,7 +215,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.rate_combo.addItems(['44100', '48000', '88200', '96000', '176400', '192000'])
         rate_layout.addWidget(self.rate_combo)
         rate_layout.addStretch()
-        config_layout.addLayout(rate_layout)
+        config_group_layout.addLayout(rate_layout)
 
         # Latency (buffer size in samples)
         latency_layout = QHBoxLayout()
@@ -220,7 +226,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.latency_combo.setToolTip("Smaller = lower latency but more CPU load\nLarger = higher latency but more stable\n\nNote: Changes require WirePlumber restart")
         latency_layout.addWidget(self.latency_combo)
         latency_layout.addStretch()
-        config_layout.addLayout(latency_layout)
+        config_group_layout.addLayout(latency_layout)
 
         # ACP Mode toggle
         acp_layout = QHBoxLayout()
@@ -229,16 +235,15 @@ class PipeWireConfigGUI(QMainWindow):
         self.acp_combo.addItems(['Disabled (Full Channels)', 'Enabled (Stereo Only)'])
         acp_layout.addWidget(self.acp_combo)
         acp_layout.addStretch()
-        config_layout.addLayout(acp_layout)
+        config_group_layout.addLayout(acp_layout)
         
-        config_group.setLayout(config_layout)
-        layout.addWidget(config_group)
-
-        # Volume & Mute Controls
+        config_group.setLayout(config_group_layout)
+        config_layout.addWidget(config_group)
+        
+        # Master Volume & Mute
         volume_group = QGroupBox("Volume & Mute")
         volume_layout = QVBoxLayout()
 
-        # Master volume
         master_layout = QHBoxLayout()
         master_layout.addWidget(QLabel("Master Volume:"))
         self.master_volume_slider = QSlider(Qt.Horizontal)
@@ -259,11 +264,106 @@ class PipeWireConfigGUI(QMainWindow):
         master_layout.addWidget(self.master_mute_btn)
         
         volume_layout.addLayout(master_layout)
-
-        
         volume_group.setLayout(volume_layout)
-        layout.addWidget(volume_group)
+        config_layout.addWidget(volume_group)
+        
+        config_layout.addStretch()
+        config_tab.setLayout(config_layout)
+        self.tabs.addTab(config_tab, "Configuration")
 
+        # Tab 2: Input Levels (ADAT + S/PDIF)
+        input_tab = QWidget()
+        input_tab_layout = QVBoxLayout()
+        
+        # Create sliders for S/PDIF-L (AS1) and S/PDIF-R (AS2) with L/R channels
+        self.spdif_sliders = {}  # Key: "Line-AS1-AN1" format, etc
+        self.spdif_labels = {}
+        self.adat_sliders = {}  # Key: "Line-ADAT3-AN1" format
+        self.adat_labels = {}
+        
+        # Helper function to create a fader column
+        def create_fader_column(label_text, control_key, sliders_dict, labels_dict):
+            """Create a vertical fader with label and percentage"""
+            column = QVBoxLayout()
+            column.setSpacing(3)
+            
+            # Label at top
+            label = QLabel(label_text)
+            label.setAlignment(Qt.AlignCenter)
+            label.setStyleSheet("font-weight: bold; font-size: 9px;")
+            column.addWidget(label)
+            
+            # Fader
+            slider = QSlider(Qt.Vertical)
+            slider.setRange(0, 65536)
+            slider.setValue(65536)
+            slider.setTickPosition(QSlider.TicksLeft)
+            slider.setTickInterval(6553)
+            slider.setMinimumHeight(100)
+            slider.setMaximumWidth(30)
+            slider.valueChanged.connect(lambda value, key=control_key: self.on_input_gain_changed(key, value))
+            column.addWidget(slider, alignment=Qt.AlignCenter)
+            
+            # Percentage label
+            pct_label = QLabel("100%")
+            pct_label.setAlignment(Qt.AlignCenter)
+            pct_label.setStyleSheet("font-size: 8px;")
+            column.addWidget(pct_label)
+            
+            sliders_dict[control_key] = slider
+            labels_dict[control_key] = pct_label
+            
+            return column
+        
+        # Create scroll area for horizontal fader layout
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Create widget to hold all faders horizontally
+        faders_container = QWidget()
+        input_group_layout = QHBoxLayout()
+        input_group_layout.setContentsMargins(10, 10, 10, 10)
+        input_group_layout.setSpacing(10)
+        
+        # S/PDIF-L (AS1)
+        input_group_layout.addLayout(create_fader_column("AS1-L", "Line-AS1-AN1", self.spdif_sliders, self.spdif_labels))
+        input_group_layout.addLayout(create_fader_column("AS1-R", "Line-AS1-AN2", self.spdif_sliders, self.spdif_labels))
+        
+        # S/PDIF-R (AS2)
+        input_group_layout.addLayout(create_fader_column("AS2-L", "Line-AS2-AN1", self.spdif_sliders, self.spdif_labels))
+        input_group_layout.addLayout(create_fader_column("AS2-R", "Line-AS2-AN2", self.spdif_sliders, self.spdif_labels))
+        
+        # ADAT Inputs (ADAT-1 to ADAT-6)
+        for i in range(1, 7):
+            adat_num = i + 2  # ADAT-1 is Line-ADAT3, etc
+            
+            # Left channel
+            input_group_layout.addLayout(create_fader_column(
+                f"A{i}L",
+                f"Line-ADAT{adat_num}-AN1",
+                self.adat_sliders,
+                self.adat_labels
+            ))
+            
+            # Right channel
+            input_group_layout.addLayout(create_fader_column(
+                f"A{i}R",
+                f"Line-ADAT{adat_num}-AN2",
+                self.adat_sliders,
+                self.adat_labels
+            ))
+        
+        input_group_layout.addStretch()
+        faders_container.setLayout(input_group_layout)
+        scroll_area.setWidget(faders_container)
+        
+        input_tab_layout.addWidget(scroll_area)
+        input_tab.setLayout(input_tab_layout)
+        self.tabs.addTab(input_tab, "Input Levels")
+
+        main_layout.addWidget(self.tabs)
         
         # Connect master volume slider
         self.master_volume_slider.valueChanged.connect(self.on_master_volume_changed)
@@ -272,7 +372,7 @@ class PipeWireConfigGUI(QMainWindow):
         self.latency_combo.currentTextChanged.connect(self.on_buffer_size_changed)
         self.rate_combo.currentTextChanged.connect(self.on_sample_rate_changed)
 
-        # Buttons
+        # Buttons at bottom
         button_layout = QHBoxLayout()
         
         apply_btn = QPushButton("Apply Configuration")
@@ -294,9 +394,9 @@ class PipeWireConfigGUI(QMainWindow):
         self.restart_btn.clicked.connect(self.restart_wireplumber)
         button_layout.addWidget(self.restart_btn)
         
-        layout.addLayout(button_layout)
+        main_layout.addLayout(button_layout)
 
-        central_widget.setLayout(layout)
+        central_widget.setLayout(main_layout)
 
     def load_devices(self):
         """Load audio devices in background"""
@@ -994,11 +1094,46 @@ monitor.alsa.rules = [
                 text=True,
                 timeout=5
             )
-            
+             
             if result.returncode != 0:
                 print(f"Error setting volume: {result.stderr}")
         except Exception as e:
             print(f"Error applying volume: {e}")
+
+    def on_input_gain_changed(self, control_key, value):
+        """Handle input gain slider change for any ADAT or S/PDIF input"""
+        # Update display label with percentage
+        percent = round((value / 65536.0) * 100)
+        
+        # Update the appropriate label
+        if control_key in self.adat_labels:
+            self.adat_labels[control_key].setText(f"{percent}%")
+        elif control_key in self.spdif_labels:
+            self.spdif_labels[control_key].setText(f"{percent}%")
+        
+        # Apply gain to ALSA device
+        self._apply_input_gain(control_key, value)
+    
+    def _apply_input_gain(self, control_name, value):
+        """Apply input gain via ALSA mixer for any ADAT or S/PDIF input"""
+        try:
+            # control_name is in the format: "Line-ADAT3-AN1", "Line-AS1-AN2", etc.
+            # Get ALSA card number (using first USB audio device, typically hw:1)
+            # For Babyface Pro, it's usually card 1
+            card_number = 1
+            
+            # Set ALSA mixer control via amixer
+            result = subprocess.run(
+                ['amixer', '-c', str(card_number), 'sset', control_name, str(value)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode != 0:
+                print(f"Error setting {control_name}: {result.stderr}")
+        except Exception as e:
+             print(f"Error applying input gain for {control_name}: {e}")
 
 
 def main():
