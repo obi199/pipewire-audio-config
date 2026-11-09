@@ -791,6 +791,88 @@ monitor.alsa.rules = [
             import traceback
             traceback.print_exc()
 
+    def on_acp_mode_changed(self, index):
+        """Handle ACP mode change - save to WirePlumber config"""
+        if not self.current_device or self.ignore_buffer_changes:
+            return
+        
+        try:
+            # Get current settings
+            channels = int(self.channels_combo.currentText())
+            sample_rate = int(self.rate_combo.currentText())
+            use_acp = index == 1
+            buffer_size = int(self.latency_combo.currentText())
+            latency_ns = int(buffer_size / sample_rate * 1e9)
+            
+            # Generate device matching pattern
+            dev_name = self.current_device['name']
+            if 'usb' in dev_name:
+                match_pattern = dev_name.split('.')[-2]
+                device_pattern = f'~alsa_.*{match_pattern}.*'
+            else:
+                device_pattern = f'~alsa_.*{dev_name}.*'
+            
+            # Build channel position list
+            position_map = {
+                2: '[ "FL", "FR" ]',
+                4: '[ "FL", "FR", "RL", "RR" ]',
+                6: '[ "FL", "FR", "FC", "LFE", "RL", "RR" ]',
+                8: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "SL", "SR" ]',
+                12: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "FLC", "FRC", "RC", "SL", "SR", "TC" ]',
+                16: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "FLC", "FRC", "RC", "SL", "SR", "TC", "TFL", "TFR", "TRL", "TRR" ]',
+            }
+            position = position_map.get(channels, '[ "FL", "FR" ]')
+            
+            # Create config file with updated ACP mode
+            config_content = f"""# PipeWire Audio Device Configuration
+# Device: {self.current_device['description']}
+# Auto-generated configuration
+# ACP Mode: {'Enabled (Stereo Only)' if use_acp else 'Disabled (Full Channels)'}
+# Sample Rate: {sample_rate} Hz
+# Buffer Size: {buffer_size} samples ({buffer_size/sample_rate*1000:.2f}ms @ {sample_rate}Hz)
+# Master Volume: {self.master_volume_slider.value()}%
+# Master Mute: {"true" if self.master_mute_btn.isChecked() else "false"}
+
+monitor.alsa.rules = [
+  {{
+    matches = [
+      {{
+        node.name = "{device_pattern}"
+      }}
+    ]
+    actions = {{
+      update-props = {{
+        api.alsa.use-acp = {str(use_acp).lower()}
+        audio.channels = {channels}
+        audio.position = {position}
+        audio.rate = {sample_rate}
+        latency.internal.ns = {latency_ns}
+        # Volume settings
+        # Master volume: 0-100%
+        # Master mute: true/false
+      }}
+    }}
+  }}
+]
+"""
+            
+            # Save config file
+            device_short = self.current_device['description'].replace(' ', '-')[:20]
+            config_file = self.config_dir / f'50-device-{device_short}.conf'
+            config_file.parent.mkdir(parents=True, exist_ok=True)
+            config_file.write_text(config_content)
+            
+            # Print status
+            mode_str = "Enabled (Stereo Only)" if use_acp else "Disabled (Full Channels)"
+            print(f"✅ ACP mode changed to: {mode_str}")
+            print(f"✅ Config saved to {config_file}")
+            print(f"⚠️  Restart WirePlumber to apply changes: systemctl --user restart wireplumber")
+            
+        except Exception as e:
+            print(f"❌ Error updating ACP mode: {e}")
+            import traceback
+            traceback.print_exc()
+
     def toggle_master_mute(self, checked):
         """Toggle master mute"""
         if checked:
