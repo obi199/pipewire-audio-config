@@ -593,13 +593,18 @@ monitor.alsa.rules = [
             print(f"Warning: Could not load volume settings: {e}")
 
     def on_master_volume_changed(self, value):
-
         """Handle master volume slider change"""
         self.master_volume_label.setText(f"{value}%")
         
         # Update all channel sliders to master volume
         for channel_id, slider in self.channel_sliders.items():
+            slider.blockSignals(True)
             slider.setValue(value)
+            slider.blockSignals(False)
+        
+        # Apply volume to PipeWire device
+        if self.current_device:
+            self._apply_volume_to_device(value)
 
     def toggle_master_mute(self, checked):
         """Toggle master mute for all channels"""
@@ -664,9 +669,12 @@ monitor.alsa.rules = [
             ch_layout.addWidget(vol_label)
             self.channel_volume_labels[channel_id] = vol_label
             
-            # Connect slider to update label
+            # Connect slider to update label and apply volume
             slider.valueChanged.connect(
                 lambda value, label=vol_label: label.setText(f"{value}%")
+            )
+            slider.valueChanged.connect(
+                lambda value: self._apply_volume_to_device(value)
             )
             
             # Mute button
@@ -695,6 +703,10 @@ monitor.alsa.rules = [
         else:
             button.setText("🔊 Unmuted")
             button.setStyleSheet("")
+        
+        # Apply mute to PipeWire device
+        if self.current_device:
+            self._apply_mute_to_device(checked)
 
     def update_device_info(self):
         """Update device information display"""
@@ -745,6 +757,102 @@ Current Settings:
         
         # Load saved volume settings
         self.load_device_volume_settings()
+
+    def _get_wpctl_device_id(self, device_name):
+        """Find the wpctl device ID for a given device name"""
+        try:
+            result = subprocess.run(
+                ['wpctl', 'status'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode != 0:
+                return None
+            
+            # Parse wpctl status output to find device ID
+            # We want sinks/sources, not the device itself
+            lines = result.stdout.split('\n')
+            sink_id = None
+            
+            for line in lines:
+                # Look for sink line with device name (contains '*' and 'Analoges Stereo' or similar)
+                if device_name.lower() in line.lower() and '*' in line:
+                    # Extract the ID (number at the start)
+                    parts = line.strip().split('.')
+                    if parts and parts[0].strip().isdigit():
+                        sink_id = int(parts[0].strip())
+                        break
+            
+            # Fallback: if not found, try to find any matching device ID
+            if sink_id is None:
+                for line in lines:
+                    if device_name.lower() in line.lower():
+                        parts = line.strip().split('.')
+                        if parts and parts[0].strip().isdigit():
+                            sink_id = int(parts[0].strip())
+                            break
+            
+            return sink_id
+        except Exception as e:
+            print(f"Error getting wpctl device ID: {e}")
+            return None
+
+    def _apply_mute_to_device(self, mute_state):
+        """Apply mute state to the current device using wpctl"""
+        try:
+            if not self.current_device:
+                return
+            
+            # Get wpctl device ID
+            device_id = self._get_wpctl_device_id(self.current_device['description'])
+            if device_id is None:
+                print(f"Warning: Could not find wpctl ID for {self.current_device['description']}")
+                return
+            
+            # Convert boolean to wpctl mute value (1 = muted, 0 = unmuted)
+            mute_value = 1 if mute_state else 0
+            
+            # Set mute using wpctl
+            result = subprocess.run(
+                ['wpctl', 'set-mute', str(device_id), str(mute_value)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode != 0:
+                print(f"Error setting mute: {result.stderr}")
+        except Exception as e:
+            print(f"Error applying mute: {e}")
+
+    def _apply_volume_to_device(self, volume_percent):
+        """Apply volume percentage to the current device using wpctl"""
+        try:
+            if not self.current_device:
+                return
+            
+            # Get wpctl device ID
+            device_id = self._get_wpctl_device_id(self.current_device['description'])
+            if device_id is None:
+                print(f"Warning: Could not find wpctl ID for {self.current_device['description']}")
+                return
+            
+            # Convert percentage (0-100) to decimal (0.0-1.0)
+            volume_decimal = volume_percent / 100.0
+            
+            # Set volume using wpctl
+            result = subprocess.run(
+                ['wpctl', 'set-volume', str(device_id), f'{volume_decimal:.2f}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode != 0:
+                print(f"Error setting volume: {result.stderr}")
+        except Exception as e:
+            print(f"Error applying volume: {e}")
 
 
 def main():
