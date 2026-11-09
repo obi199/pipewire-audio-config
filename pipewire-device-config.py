@@ -231,16 +231,6 @@ class PipeWireConfigGUI(QMainWindow):
         acp_layout.addStretch()
         config_layout.addLayout(acp_layout)
         
-        # Info box about buffer size and device changes
-        info_text = QLabel(
-            "📝 Note: Buffer size changes require WirePlumber restart to take effect.\n"
-            "Use: systemctl --user restart wireplumber\n"
-            "Volume & mute changes take effect immediately."
-        )
-        info_text.setStyleSheet("background-color: #e8f4f8; padding: 10px; border-radius: 5px;")
-        info_text.setWordWrap(True)
-        config_layout.addWidget(info_text)
-
         config_group.setLayout(config_layout)
         layout.addWidget(config_group)
 
