@@ -396,6 +396,14 @@ Current Settings:
         if dev['rate'] > 0:
             self.rate_combo.setCurrentText(str(dev['rate']))
         self.acp_combo.setCurrentIndex(1 if dev['use_acp'] else 0)
+
+        # Disable ACP mode toggle for Babyface Pro
+        if "Babyface" in dev["description"]:
+            self.acp_combo.setEnabled(False)
+            self.acp_combo.setToolTip("ACP mode managed by 51-rme-babyface.conf - changes do not persist")
+        else:
+            self.acp_combo.setEnabled(True)
+            self.acp_combo.setToolTip("")
         # Block buffer size signal during update to prevent triggering save
         self.latency_combo.blockSignals(True)
         self.latency_combo.setCurrentText(str(nearest_buffer))
