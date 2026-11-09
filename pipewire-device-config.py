@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
     QLabel, QComboBox, QSpinBox, QSlider, QPushButton, QGroupBox,
     QMessageBox, QListWidget, QListWidgetItem, QScrollArea
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont
 
 
@@ -649,8 +649,8 @@ monitor.alsa.rules = [
                     "Refresh the device list to see updated settings."
                 )
                 
-                # Automatically refresh devices
-                self.load_devices()
+                # Use QTimer to defer device refresh to avoid event loop issues
+                QTimer.singleShot(500, self.load_devices)
             else:
                 QMessageBox.critical(
                     self, "Error",
@@ -808,8 +808,10 @@ monitor.alsa.rules = [
                 
                 if channel_id in self.channel_mute_buttons:
                     self.channel_mute_buttons[channel_id].blockSignals(True)
-                    self.channel_mute_buttons[channel_id].setChecked(muted)
-                    if muted:
+                    # Convert muted to boolean if it's a string from JSON
+                    muted_bool = muted if isinstance(muted, bool) else (muted.lower() == 'true' if isinstance(muted, str) else muted)
+                    self.channel_mute_buttons[channel_id].setChecked(muted_bool)
+                    if muted_bool:
                         self.channel_mute_buttons[channel_id].setText("🔇 Muted")
                         self.channel_mute_buttons[channel_id].setStyleSheet("background-color: #ffcccc;")
                     self.channel_mute_buttons[channel_id].blockSignals(False)
