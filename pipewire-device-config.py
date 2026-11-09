@@ -275,11 +275,23 @@ class PipeWireConfigGUI(QMainWindow):
         input_tab = QWidget()
         input_tab_layout = QVBoxLayout()
         
+        # Input mute button section
+        input_mute_layout = QHBoxLayout()
+        self.input_mute_btn = QPushButton("🔊 Mute All Inputs")
+        self.input_mute_btn.setCheckable(True)
+        self.input_mute_btn.setStyleSheet("font-weight: bold; padding: 8px;")
+        self.input_mute_btn.setMaximumWidth(200)
+        self.input_mute_btn.clicked.connect(self.on_input_mute_toggled)
+        input_mute_layout.addWidget(self.input_mute_btn)
+        input_mute_layout.addStretch()
+        input_tab_layout.addLayout(input_mute_layout)
+        
         # Create sliders for S/PDIF-L (AS1) and S/PDIF-R (AS2) with L/R channels
         self.spdif_sliders = {}  # Key: "Line-AS1-AN1" format, etc
         self.spdif_labels = {}
         self.adat_sliders = {}  # Key: "Line-ADAT3-AN1" format
         self.adat_labels = {}
+        self.input_mute_controls = {}  # Track mute state
         
         # Helper function to create a fader column
         def create_fader_column(label_text, control_key, sliders_dict, labels_dict):
@@ -993,6 +1005,35 @@ monitor.alsa.rules = [
         # Apply mute to PipeWire device
         if self.current_device:
             self._apply_mute_to_device(checked)
+
+    def on_input_mute_toggled(self, checked):
+        """Toggle mute for all input faders"""
+        if checked:
+            self.input_mute_btn.setText("🔇 All Inputs Muted")
+            self.input_mute_btn.setStyleSheet("background-color: #ffcccc; font-weight: bold; padding: 8px;")
+            # Store current slider values and set to 0
+            self.input_mute_controls['muted'] = True
+            self.input_mute_controls['stored_values'] = {}
+            for key, slider in {**self.spdif_sliders, **self.adat_sliders}.items():
+                self.input_mute_controls['stored_values'][key] = slider.value()
+                slider.blockSignals(True)
+                slider.setValue(0)
+                slider.blockSignals(False)
+        else:
+            self.input_mute_btn.setText("🔊 Mute All Inputs")
+            self.input_mute_btn.setStyleSheet("font-weight: bold; padding: 8px;")
+            # Restore stored slider values
+            self.input_mute_controls['muted'] = False
+            if 'stored_values' in self.input_mute_controls:
+                for key, value in self.input_mute_controls['stored_values'].items():
+                    if key in self.spdif_sliders:
+                        self.spdif_sliders[key].blockSignals(True)
+                        self.spdif_sliders[key].setValue(value)
+                        self.spdif_sliders[key].blockSignals(False)
+                    elif key in self.adat_sliders:
+                        self.adat_sliders[key].blockSignals(True)
+                        self.adat_sliders[key].setValue(value)
+                        self.adat_sliders[key].blockSignals(False)
 
     def on_master_volume_changed(self, value):
         """Handle master volume slider change"""
