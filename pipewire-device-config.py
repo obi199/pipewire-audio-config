@@ -1047,21 +1047,32 @@ monitor.alsa.rules = [
 
     def on_fader_mute_toggled(self, control_key, checked, slider):
         """Toggle mute for individual fader"""
+        print(f"DEBUG: on_fader_mute_toggled called - control_key={control_key}, checked={checked}, slider.value()={slider.value()}")
         if checked:
             # Store current value and set to 0 (mute)
             if 'fader_mutes' not in self.input_mute_controls:
                 self.input_mute_controls['fader_mutes'] = {}
             self.input_mute_controls['fader_mutes'][control_key] = slider.value()
+            print(f"DEBUG: Storing {control_key} value: {slider.value()}")
             slider.blockSignals(True)
             slider.setValue(0)
             slider.blockSignals(False)
+            # Explicitly apply the change to device since we blocked signals
+            self._apply_input_gain(control_key, 0)
+            print(f"DEBUG: Set {control_key} to 0, new value: {slider.value()}")
         else:
             # Restore stored value
             if 'fader_mutes' in self.input_mute_controls and control_key in self.input_mute_controls['fader_mutes']:
                 stored_value = self.input_mute_controls['fader_mutes'][control_key]
+                print(f"DEBUG: Restoring {control_key} value: {stored_value}")
                 slider.blockSignals(True)
                 slider.setValue(stored_value)
                 slider.blockSignals(False)
+                # Explicitly apply the change to device since we blocked signals
+                self._apply_input_gain(control_key, stored_value)
+                print(f"DEBUG: Restored {control_key}, new value: {slider.value()}")
+            else:
+                print(f"DEBUG: No stored value found for {control_key}")
 
     def on_master_volume_changed(self, value):
         """Handle master volume slider change"""
