@@ -270,6 +270,7 @@ class PipeWireConfigGUI(QMainWindow):
         
         # Connect buffer size combo for immediate config update
         self.latency_combo.currentTextChanged.connect(self.on_buffer_size_changed)
+        self.rate_combo.currentTextChanged.connect(self.on_sample_rate_changed)
 
         # Buttons
         button_layout = QHBoxLayout()
