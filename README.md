@@ -2,6 +2,8 @@
 
 A modular graphical utility and command-line tool to configure USB and pro-audio interfaces on PipeWire and WirePlumber with support for multi-channel audio, custom buffer sizes, sample rates, ACP mode toggling, and hardware-level ALSA input/output mixer consoles.
 
+> This tool is exclusively for Linux distributions. PipeWire is a Linux multimedia server.
+
 > **Hardware Note**: This application was programmed and tested specifically for the **RME Babyface Pro** (in Class Compliant mode, featuring dedicated hardware preamp and mixer controls). Other audio cards and USB interfaces also work seamlessly for buffer sizes, sample rates, ACP mode switching, and channel configuration, with optional custom JSON profile support.
 
 ## Overview
