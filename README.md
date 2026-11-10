@@ -2,6 +2,8 @@
 
 A modular graphical utility and command-line tool to configure USB and pro-audio interfaces on PipeWire and WirePlumber with support for multi-channel audio, custom buffer sizes, sample rates, ACP mode toggling, and hardware-level ALSA input/output mixer consoles.
 
+> **Hardware Note**: This application was programmed and tested specifically for the **RME Babyface Pro** (in Class Compliant mode, featuring dedicated hardware preamp and mixer controls). Other audio cards and USB interfaces also work seamlessly for buffer sizes, sample rates, ACP mode switching, and channel configuration, with optional custom JSON profile support.
+
 ## Overview
 
 Configure your audio devices without manually editing configuration files:
@@ -156,15 +158,20 @@ For 12-channel ADAT operation:
 
 Changes take effect after restart completes! 🎉
 
-## Supported Devices
+## Hardware Compatibility & Supported Devices
 
-Works with any USB audio device that supports multi-channel operation:
-- RME Babyface Pro / UFX series
-- Focusrite Scarlett series
-- MOTU Audio interfaces
-- PreSonus Studio series
-- Generic USB audio interfaces
-- Built-in sound cards
+This utility was programmed and tested specifically for the **RME Babyface Pro** (in USB Class Compliant mode), featuring complete dedicated ALSA mixer controls, microphone preamp gain scaling, coupled stereo main output, and custom channel labels (AN1/2, PH3/4, S/PDIF, ADAT 1–8).
+
+**Other audio interfaces and sound cards are also fully supported**:
+- **Generic USB Interfaces & Sound Cards**: Any ALSA/PipeWire compatible device supports sample rate switching, buffer size / latency adjustments, ACP mode toggling, and standard multi-channel spatial layouts.
+- **Custom Hardware Profiles**: New audio interfaces can have custom channel names and ALSA mixer faders defined simply by adding a JSON profile to `~/.config/pipewire-audio-config/profiles/` (or contributing to `pipewire_config/profiles/`).
+- **Tested Device Families**:
+  - **RME**: Babyface Pro / FS, Fireface / UFX series (Class Compliant mode)
+  - **Focusrite**: Scarlett series (2i2, 4i4, 18i8, 18i20)
+  - **MOTU**: UltraLite, M2/M4/M6, 8pre series
+  - **PreSonus**: Studio / AudioBox series
+  - **Behringer**: U-Phoria UMC series (UMC204HD, UMC404HD, UMC1820)
+  - **Standard Built-in Sound Cards**: Realtek / Intel HDA stereo and surround outputs
 
 ## Troubleshooting
 
