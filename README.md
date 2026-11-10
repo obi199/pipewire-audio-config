@@ -1,14 +1,17 @@
 # PipeWire Audio Device Configuration GUI
 
-A simple graphical tool to configure USB audio devices on PipeWire with support for multi-channel audio, custom buffer sizes, sample rates, and ACP mode toggling.
+A modular graphical utility and command-line tool to configure USB and pro-audio interfaces on PipeWire and WirePlumber with support for multi-channel audio, custom buffer sizes, sample rates, ACP mode toggling, and hardware-level ALSA input/output mixer consoles.
 
 ## Overview
 
-Configure your audio devices without touching configuration files:
-- **Channels**: Automatically uses device's maximum channels (read-only)
-- **Sample Rate**: 44.1kHz to 192kHz  
-- **Buffer Size**: Professional audio sizes (32-4096 samples)
-- **ACP Mode**: Toggle stereo-only vs multi-channel mode
+Configure your audio devices without manually editing configuration files:
+- **Channels**: Automatically locks to the device's native hardware maximum (read-only)
+- **Sample Rate**: Clock frequencies from 44.1 kHz to 192 kHz
+- **Buffer Size**: Professional audio buffer sizes (32–4096 samples) with real-time calculated latency
+- **ACP Mode**: Toggle between stereo-only compatibility and full multi-channel hardware access
+- **Input & Output Hardware Mixers**: Real-time ALSA mixer consoles with faders, preamps, mute ("M"), and solo ("S") routing
+- **Single-Instance Management**: Prevents duplicate instances and focuses the running window
+- **Headless CLI**: Automate and script audio device settings in terminal environments
 
 Tested on: Ubuntu, Debian, Fedora, Arch, MX Linux
 
@@ -39,89 +42,104 @@ sudo pacman -S python python-pyqt5
 
 ### Run
 
+**Desktop GUI:**
 ```bash
+# Via launcher script
 ./run-pipewire-config.sh
+
+# Or as a Python module
+python3 -m pipewire_config
+
+# Or via wrapper script
+python3 pipewire-device-config.py
 ```
 
-Or directly:
+**Headless CLI (for scripts & automation):**
 ```bash
-python3 pipewire-device-config.py
+# List devices
+python3 -m pipewire_config.cli --list
+
+# Inspect device latency
+python3 -m pipewire_config.cli --device "Babyface"
+
+# Set buffer size and restart WirePlumber
+python3 -m pipewire_config.cli --device "Babyface" --buffer 128 --apply
+```
+
+**Optional System Install:**
+```bash
+pip install -e .
+
+# Then launch directly anywhere:
+pipewire-config       # GUI
+pipewire-config-cli   # CLI
 ```
 
 ## Usage
 
 ### Basic Workflow
 
-1. **Select Device** - Choose an audio device from the dropdown
-2. **View Settings** - Current configuration displayed automatically (including channel count)
-3. **Configure**:
+1. **Select Device** - Choose an audio interface from the dropdown
+2. **View Device Configuration** - Active hardware ALSA path, sample rate, buffer size, and calculated latency (`ms`) update dynamically
+3. **Configure Latency & Clocks**:
     - **Channels**: Displays device's native channel count (read-only)
-    - **Sample Rate**: 44.1kHz to 192kHz (dropdown)
-    - **Buffer Size**: 32-4096 samples (dropdown)
+    - **Sample Rate**: 44.1 kHz to 192 kHz (dropdown)
+    - **Buffer Size**: 32–4096 samples (dropdown)
     - **ACP Mode**: Toggle between full channels and stereo-only
-4. **Master Volume**: Adjust overall device volume (0-100%) with real-time wpctl control
-5. **Restart WirePlumber**: Click button to apply buffer/sample rate changes
+4. **Hardware Mixer Adjustments (Real-Time)**:
+    - **Input Levels**: Adjust analog preamp gains (Mic 1/2, Inst 3/4), analog line inputs, S/PDIF, and ADAT optical inputs with independent Mute ("M") and Solo ("S") buttons
+    - **Output Levels**: Adjust coupled stereo Main Out (AN1/2), Phones (PH3/4), S/PDIF, and ADAT outputs with independent Mute ("M") and Solo ("S") buttons
+5. **Apply & Restart WirePlumber**: Click to generate configuration rules and restart WirePlumber to apply buffer size or sample clock changes
 
-### Device Information
+### Dynamic Hardware Mixer Consoles
 
-The app displays detailed device info including:
-- **Channel Mapping**: Custom names for known devices (Babyface Pro: Main-L/R, ADAT-1-8, S/PDIF-L/R)
-- **Standard Layout**: Generic channel names (FL, FR, FC, etc.) for unknown devices
-- **Sample Rate**: Current device sample rate
-- **ACP Mode**: Whether device is in stereo-only or full-channel mode
+When an interface with supported ALSA mixer controls is selected (such as the RME Babyface Pro), the unified single-window layout displays:
+- **Input Levels Mixer**: Horizontal scrollable console controlling hardware analog preamps, analog line inputs, digital S/PDIF, and ADAT optical lines.
+- **Output Levels Mixer**: Direct hardware output attenuation, including coupled stereo Main Out (AN1/2), stereo Phones, S/PDIF, and ADAT digital outputs.
+- **Mute ("M") & Solo ("S") Routing**: Isolate individual channels or silence paths instantly without disturbing other fader levels.
+- **Debounced ALSA Dispatch**: Fast slider movements are debounced into 40ms batches to eliminate CPU process spikes.
 
 ## Features
 
-### Device Detection
-Automatically finds all ALSA audio devices via pw-dump with real-time updates
+### Device Detection & Dynamic Card Resolution
+Automatically detects all ALSA audio sinks and sources via `pw-dump` JSON parsing. Dynamically resolves target ALSA card indices from PipeWire node paths (`front:X`, `hw:X,Y`) to prevent targeting inactive MIDI interfaces.
 
-### Master Volume Control
-- **Real-time volume adjustment**: 0-100% slider with instant feedback
-- **Mute button**: Toggle 🔊/🔇 with visual red background when muted
-- **wpctl integration**: Changes apply immediately without restart
+### Hardware Input & Output Mixers
+- **Real-Time Faders**: 0–100% gain sliders mapped to hardware mixer controls via `amixer`
+- **Dynamic Limit Scaling**: Automatically scales custom ALSA control limits (e.g. 0–65 dB microphone preamps) to normalized slider percentages
+- **Per-Channel Mute**: Toggle "M" with visual red highlighting; remembers original fader volume when unmuted
+- **Per-Channel Solo**: Toggle "S" with visual amber highlighting to isolate channels and suppress background inputs
+- **Coupled Stereo Main Out**: Main Analog Outputs (AN1/AN2) adjust in lockstep
 
-### Sample Rate Control
-- **Dynamic adjustment**: Change between 44.1kHz to 192kHz
-- **Auto-config**: Saves to WirePlumber config automatically
-- **Latency recalculation**: Updates buffer latency based on sample rate
-- **Supported rates**: 44100, 48000, 88200, 96000, 176400, 192000 Hz
+### Real-Time Latency Calculation
+- Dynamic latency calculation in milliseconds and sample count displayed directly beneath buffer size controls:
+  - 32 samples @ 48kHz = 0.67ms (ultra low-latency)
+  - 128 samples @ 48kHz = 2.67ms (recording standard)
+  - 256 samples @ 48kHz = 5.33ms (balanced)
+  - 1024 samples @ 48kHz = 21.33ms (maximum stability)
 
-### Buffer Size Control
-Standard audio buffer sizes (32-4096 samples) with real-time latency calculation:
-- 32 samples @ 48kHz = 0.67ms (extreme low-latency)
-- 256 samples @ 48kHz = 5.33ms (balanced - default)
-- 1024 samples @ 48kHz = 21.33ms (maximum stability)
+See [Buffer Size Reference](docs/BUFFER_SIZE_REFERENCE.md) for complete tables.
 
-See `BUFFER_SIZE_REFERENCE.md` for complete table.
+### Declarative Device Profiles
+- Store device layouts, channel names, and mixer controls in declarative JSON profiles (`pipewire_config/profiles/`)
+- User-extensible: drop custom profiles into `~/.config/pipewire-audio-config/profiles/` to support any audio interface without touching Python code
+- Graceful fallback: unsupported interfaces receive standard spatial channel topologies and clean placeholder views
 
-### Multi-Channel Support
-- Stereo (2ch) for basic audio
-- Surround (4-8ch) for gaming/movies
-- Multi-channel (12-16ch) for professional audio and ADAT interfaces
-- **Automatic channel detection**: Always uses device's maximum channels
-- **Custom device names**: Displays meaningful channel names for known devices (e.g., Babyface Pro shows Main-L/R, ADAT-1-8, S/PDIF-L/R)
-
-### ACP Mode Toggle
-- **Disabled**: Full device capabilities, multi-channel access
-- **Enabled**: Stereo-only mode for compatibility
-
-### One-Click WirePlumber Restart
-- **Restart Button**: Apply buffer size and sample rate changes with one click
-- **Status Messages**: Confirmation when changes are saved
-- **Error Handling**: Gracefully handles restart failures
+### Single-Instance IPC
+- Uses local socket IPC (`QLocalServer` / `QLocalSocket`) to enforce a single running window
+- Launching a second instance automatically raises and focuses the existing window
 
 ### Persistent Configuration
-Saves settings to WirePlumber config files automatically:
+Saves settings to WirePlumber configuration rules:
 ```
 ~/.config/wireplumber/wireplumber.conf.d/50-device-*.conf
 ```
 
-Config includes:
-- Sample rate (audio.rate)
-- Buffer size (latency.internal.ns)
-- Channel configuration
-- ACP mode setting
-- Volume settings (for reference)
+Configuration includes:
+- Sample rate (`audio.rate`)
+- Buffer size (`latency.internal.ns`)
+- Channel configuration (`audio.channels`, `audio.position`)
+- ACP mode setting (`api.alsa.use-acp`)
 
 ## Example: RME Babyface Pro Setup
 
@@ -196,30 +214,81 @@ After changing buffer size or sample rate:
 
 ```
 pipewire-audio-config/
-├── pipewire-device-config.py      # Main GUI application
-├── run-pipewire-config.sh         # Launcher script
+├── pipewire_config/               # Core Python package
+│   ├── __init__.py
+│   ├── __main__.py               # python3 -m pipewire_config entry point
+│   ├── cli.py                    # Headless CLI entry point
+│   ├── core/                     # Pure Python system adapters
+│   │   ├── detector.py           # pw-dump parsing & device discovery
+│   │   ├── config_builder.py     # WirePlumber .conf SPA-JSON generator
+│   │   ├── alsa_mixer.py         # Dynamic ALSA card resolution & amixer/wpctl
+│   │   └── service.py            # WirePlumber systemd lifecycle manager
+│   ├── profiles/                 # Declarative hardware profiles
+│   │   ├── loader.py             # Profile discovery & schema validation
+│   │   └── babyface_pro.json     # RME Babyface Pro declarative profile
+│   └── ui/                       # PyQt5 Presentation Layer
+│       ├── main_window.py        # Top-level window coordinator
+│       └── widgets/
+│           ├── config_panel.py   # Latency, sample rate, buffer size, ACP
+│           ├── volume_panel.py   # Master volume & mute controls
+│           └── fader_strip.py    # Scrollable input mixer with mute/solo
+├── tests/                         # Automated test suite
+│   ├── test_config_builder.py
+│   ├── test_detector.py
+│   ├── test_alsa_mixer.py
+│   ├── test_loader.py
+│   ├── test_cli.py
+│   └── test_ui.py
+├── pyproject.toml                 # Standard packaging metadata & entry points
+├── pipewire-device-config.py      # Backward-compatible wrapper script
+├── babyface_channels.py           # Legacy channel mappings (deprecated)
+├── run-pipewire-config.sh         # Shell launcher script
+├── setup.sh                       # Setup and installation script
+├── QUICKSTART.sh                  # Quick start guide
 ├── requirements.txt               # Python dependencies
-├── README.md                      # This file
-├── PIPEWIRE_CONFIG_README.md      # Detailed documentation
-└── BUFFER_SIZE_REFERENCE.md       # Buffer size reference table
+├── README.md                      # Overview and quick start guide
+└── docs/                          # Detailed documentation
+    ├── SETUP.md                   # Installation & setup guide
+    ├── BUFFER_SIZE_REFERENCE.md   # Buffer size and latency table
+    ├── BUFFER_SIZE_CHANGES.md     # How buffer size changes work
+    ├── CHANNEL_LAYOUT.md          # Multi-channel layout documentation
+    ├── BABYFACE_PRO_CHANNELS.md   # RME Babyface Pro specific guide
+    ├── DEVICE_DETECTION.md        # Device detection mechanism
+    ├── ACP_MODE_EXPLAINED.md      # ACP mode explanation
+    ├── PIPEWIRE_CONFIG_README.md  # Detailed WirePlumber config guide
+    └── PROJECT_STATUS.md          # Project roadmap & status
 ```
 
-## Development
+## Documentation
 
-### Requirements
+Detailed documentation is available in the [`docs/`](docs/) directory:
+
+- [Setup & Installation Guide](docs/SETUP.md) - Detailed prerequisites, automated and manual installation instructions.
+- [Buffer Size & Latency Reference](docs/BUFFER_SIZE_REFERENCE.md) - Complete latency tables across all sample rates (44.1kHz–192kHz).
+- [Buffer Size Changes Explained](docs/BUFFER_SIZE_CHANGES.md) - Technical explanation of how PipeWire and WirePlumber apply buffer sizes.
+- [Multi-Channel Layout Guide](docs/CHANNEL_LAYOUT.md) - Channel positioning, pro audio mappings, and surround topologies.
+- [RME Babyface Pro Guide](docs/BABYFACE_PRO_CHANNELS.md) - Hardware channels, ADAT/SPDIF mappings, and ALSA mixer routing.
+- [Device Detection](docs/DEVICE_DETECTION.md) - Deep dive into `pw-dump` JSON parsing and ALSA node enumeration.
+- [ACP Mode Explained](docs/ACP_MODE_EXPLAINED.md) - Audio Codec Protocol vs pro-audio multi-channel operation.
+- [WirePlumber Config Guide](docs/PIPEWIRE_CONFIG_README.md) - WirePlumber `.conf` SPA-JSON structure and syntax rules.
+- [Project Status & Roadmap](docs/PROJECT_STATUS.md) - Feature checklist, architecture notes, and version roadmap.
+
+## Development & Testing
+
+### Running Tests
 ```bash
-pip3 install -r requirements.txt
+python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-### Run in development
+### Launching GUI in Development
 ```bash
-python3 pipewire-device-config.py
+python3 -m pipewire_config
 ```
 
-### Code Structure
-- **DeviceDetector**: Background thread for device detection via `pw-dump`
-- **PipeWireConfigGUI**: Main Qt5 window with controls
-- Configuration saved to `~/.config/wireplumber/wireplumber.conf.d/`
+### Launching CLI in Development
+```bash
+python3 -m pipewire_config.cli --help
+```
 
 ## Tips & Tricks
 
@@ -257,7 +326,19 @@ Issues and pull requests welcome!
 
 ## Changelog
 
-### v1.2.0 (2026-11-09) - Current
+### v1.3.0 (2026-11-10) - Current
+- **New**: Modular Python package architecture (`pipewire_config`) with pure Python core backend services decoupled from GUI.
+- **New**: Headless command-line interface (`pipewire_config.cli`) with `--list`, `--device`, `--buffer`, `--rate`, `--acp`, `--dry-run`, and `--json` support.
+- **New**: Declarative JSON device profile schema (`pipewire_config/profiles/`) with user override support in `~/.config/pipewire-audio-config/profiles/`.
+- **New**: Hardware Input Mixer console with 28 channels for Babyface Pro (Mic 1 & 2 preamp gains, Mic 1 & 2 L/R, Inst 3 & 4 preamp gains, Inst 3 & 4 L/R, S/PDIF L/R, and ADAT 1–8).
+- **New**: Hardware Output Mixer console with coupled stereo Main Out (AN1/2), Phones (PH3/4), S/PDIF (AS1/2), and ADAT Outs 1–6 (ADAT3–8).
+- **New**: Independent Mute ("M") and Solo ("S") buttons across all input and output fader channels.
+- **New**: Single-instance application management via local socket IPC (`QLocalServer` / `QLocalSocket`).
+- **New**: Dynamic ALSA sound card index resolution with multi-format path matching (`front:X`, `hw:X,Y`) to prevent inactive MIDI card targeting.
+- **New**: Real-time calculated latency display integrated directly into Device Configuration.
+- **New**: Comprehensive automated unit test suite with 22 tests covering core services, profile loading, and UI widget behaviors.
+
+### v1.2.0 (2026-11-09)
 - **Changed**: Channels now read-only (always uses device's maximum)
 - **Improved**: Simplified UI by removing manual channel selection
 - **Improved**: Prevents user confusion about channel configuration

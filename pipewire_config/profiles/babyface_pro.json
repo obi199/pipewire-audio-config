@@ -1,0 +1,98 @@
+{
+  "name": "RME Babyface Pro - Physical I/O",
+  "match_description": "Babyface Pro",
+  "channels": 12,
+  "description": "Babyface Pro with main analog I/O + 8x ADAT + S/PDIF",
+  "has_input_mixer": true,
+  "has_output_mixer": true,
+  "mixer_controls": {
+    "analog": [
+      {"key": "Mic-AN1 Gain", "label": "Mic1 Gain"},
+      {"key": "Mic-AN1-AN1", "label": "Mic1-L (AN1)"},
+      {"key": "Mic-AN1-AN2", "label": "Mic1-R (AN2)"},
+      {"key": "Mic-AN2 Gain", "label": "Mic2 Gain"},
+      {"key": "Mic-AN2-AN1", "label": "Mic2-L (AN1)"},
+      {"key": "Mic-AN2-AN2", "label": "Mic2-R (AN2)"},
+      {"key": "Line-IN3 Gain", "label": "Inst3 Gain"},
+      {"key": "Line-IN3-AN1", "label": "Inst3-L (AN1)"},
+      {"key": "Line-IN3-AN2", "label": "Inst3-R (AN2)"},
+      {"key": "Line-IN4 Gain", "label": "Inst4 Gain"},
+      {"key": "Line-IN4-AN1", "label": "Inst4-L (AN1)"},
+      {"key": "Line-IN4-AN2", "label": "Inst4-R (AN2)"}
+    ],
+    "spdif": [
+      {"key": "Line-AS1-AN1", "label": "S/PDIF-L (AS1/AN1)"},
+      {"key": "Line-AS1-AN2", "label": "S/PDIF-L (AS1/AN2)"},
+      {"key": "Line-AS2-AN1", "label": "S/PDIF-R (AS2/AN1)"},
+      {"key": "Line-AS2-AN2", "label": "S/PDIF-R (AS2/AN2)"}
+    ],
+    "adat": [
+      {"key": "Line-ADAT3-AN1", "label": "ADAT1-L (AN1)"},
+      {"key": "Line-ADAT3-AN2", "label": "ADAT1-R (AN2)"},
+      {"key": "Line-ADAT4-AN1", "label": "ADAT2-L (AN1)"},
+      {"key": "Line-ADAT4-AN2", "label": "ADAT2-R (AN2)"},
+      {"key": "Line-ADAT5-AN1", "label": "ADAT3-L (AN1)"},
+      {"key": "Line-ADAT5-AN2", "label": "ADAT3-R (AN2)"},
+      {"key": "Line-ADAT6-AN1", "label": "ADAT4-L (AN1)"},
+      {"key": "Line-ADAT6-AN2", "label": "ADAT4-R (AN2)"},
+      {"key": "Line-ADAT7-AN1", "label": "ADAT5-L (AN1)"},
+      {"key": "Line-ADAT7-AN2", "label": "ADAT5-R (AN2)"},
+      {"key": "Line-ADAT8-AN1", "label": "ADAT6-L (AN1)"},
+      {"key": "Line-ADAT8-AN2", "label": "ADAT6-R (AN2)"}
+    ]
+  },
+  "output_mixer_controls": {
+    "analog": [
+      {
+        "key": "Main-Out AN1/AN2",
+        "keys": ["Main-Out AN1", "Main-Out AN2"],
+        "label": "Main (AN1/2)",
+        "stereo": true
+      },
+      {"key": "Main-Out PH3", "label": "Phones-L (PH3)"},
+      {"key": "Main-Out PH4", "label": "Phones-R (PH4)"}
+    ],
+    "spdif": [
+      {"key": "Main-Out AS1", "label": "S/PDIF-L (AS1)"},
+      {"key": "Main-Out AS2", "label": "S/PDIF-R (AS2)"}
+    ],
+    "adat": [
+      {"key": "Main-Out ADAT3", "label": "ADAT1 (ADAT3)"},
+      {"key": "Main-Out ADAT4", "label": "ADAT2 (ADAT4)"},
+      {"key": "Main-Out ADAT5", "label": "ADAT3 (ADAT5)"},
+      {"key": "Main-Out ADAT6", "label": "ADAT4 (ADAT6)"},
+      {"key": "Main-Out ADAT7", "label": "ADAT5 (ADAT7)"},
+      {"key": "Main-Out ADAT8", "label": "ADAT6 (ADAT8)"}
+    ]
+  },
+  "layout": {
+    "outputs": [
+      "Main-L",
+      "Main-R",
+      "ADAT-1",
+      "ADAT-2",
+      "ADAT-3",
+      "ADAT-4",
+      "ADAT-5",
+      "ADAT-6",
+      "ADAT-7",
+      "ADAT-8",
+      "S/PDIF-L",
+      "S/PDIF-R"
+    ],
+    "inputs": [
+      "Main-L",
+      "Main-R",
+      "ADAT-1",
+      "ADAT-2",
+      "ADAT-3",
+      "ADAT-4",
+      "ADAT-5",
+      "ADAT-6",
+      "ADAT-7",
+      "ADAT-8",
+      "S/PDIF-L",
+      "S/PDIF-R"
+    ]
+  }
+}

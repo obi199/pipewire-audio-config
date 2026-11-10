@@ -1,16 +1,18 @@
 # PipeWire Audio Device Configuration GUI
 
-A simple graphical tool to configure audio devices in PipeWire: channels, sample rate, latency, and ACP mode.
+A modular graphical tool and command-line utility to configure audio devices in PipeWire: buffer sizes, sample rates, latency, ACP mode, and ALSA hardware input/output mixers.
 
 ## Features
 
-- **Device Detection**: Automatically finds all ALSA audio devices
-- **Channel Configuration**: Set 2, 4, 6, 8, 12, or 16 channels
-- **Sample Rate**: Choose from 44.1kHz to 192kHz
-- **Buffer Size Control**: Standard sizes (32, 64, 128, 256, 512, 1024, 2048, 4096 samples)
-- **ACP Mode Toggle**: Enable/disable stereo-only mode
-- **Save Profiles**: Create persistent WirePlumber configurations
-- **Multi-Distro Support**: Works on Ubuntu, Debian, Fedora, Arch, etc.
+- **Device Detection**: Automatically discovers all ALSA audio devices via PipeWire `pw-dump`
+- **Channel Locking**: Locks to the device's physical hardware channel limit (read-only)
+- **Sample Rate**: Clock frequencies from 44.1 kHz to 192 kHz
+- **Buffer Size Control**: Standard sizes (32, 64, 128, 256, 512, 1024, 2048, 4096 samples) with real-time calculated latency
+- **ACP Mode Toggle**: Enable/disable stereo-only mode vs full multi-channel access
+- **Input & Output Hardware Mixers**: Real-time ALSA faders with independent Mute ("M") and Solo ("S") routing
+- **Headless CLI**: Query and configure audio interfaces from terminal and automation scripts
+- **Single-Instance IPC**: Enforces single-window execution via local socket IPC
+- **Save & Apply**: Create persistent WirePlumber `.conf` files and apply changes immediately
 
 ## Installation
 
@@ -38,34 +40,34 @@ sudo apt update
 sudo apt install python3 python3-pyqt5
 ```
 
-### 2. Setup the Tool
+### 2. Launch Options
 
+#### Desktop GUI
 ```bash
-# Copy scripts to a convenient location
-mkdir -p ~/.local/bin
-cp pipewire-device-config.py ~/.local/bin/
-cp run-pipewire-config.sh ~/.local/bin/
-
-# Make executable
-chmod +x ~/.local/bin/run-pipewire-config.sh
-chmod +x ~/.local/bin/pipewire-device-config.py
-
-# Add to PATH (add to ~/.bashrc or ~/.zshrc)
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-## Usage
-
-### Option 1: Using the Launcher Script
-```bash
+# Option 1: Using launcher script
 ./run-pipewire-config.sh
-# or if in PATH:
-run-pipewire-config.sh
+
+# Option 2: Direct module execution
+python3 -m pipewire_config
+
+# Option 3: Backward-compatible wrapper
+python3 pipewire-device-config.py
 ```
 
-### Option 2: Direct Python
+#### Headless CLI
 ```bash
-python3 pipewire-device-config.py
+# List devices
+python3 -m pipewire_config.cli --list
+
+# Apply buffer size and restart WirePlumber
+python3 -m pipewire_config.cli --device "Babyface" --buffer 128 --apply
+```
+
+#### Optional Package Installation
+```bash
+pip install -e .
+pipewire-config       # Launches GUI
+pipewire-config-cli   # Launches CLI
 ```
 
 ## How It Works

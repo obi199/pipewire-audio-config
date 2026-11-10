@@ -1,70 +1,59 @@
 # PipeWire Audio Config - Project Status Report
 
-**Date:** November 9, 2026  
+**Date:** November 10, 2026  
 **Status:** ✅ COMPLETE - PRODUCTION READY  
-**Version:** 1.2.0
+**Version:** 1.3.0
 
 ---
 
 ## Executive Summary
 
-The PipeWire Audio Config project is a complete, fully-featured GUI application for managing audio device configuration on Linux. It includes:
+The PipeWire Audio Config project is a complete, modular Python package (`pipewire_config`) and GUI/CLI utility for managing audio device configuration and hardware mixing on Linux. It includes:
 
-- **PyQt5 GUI** for audio device management
-- **Automatic device detection** via PipeWire
-- **Custom channel naming** for specific devices (Babyface Pro)
-- **WirePlumber configuration generation**
-- **Automated setup script** for multi-distro deployment
-- **Comprehensive documentation**
-
-All core features are implemented, tested, and ready for user distribution.
+- **Decoupled Architecture**: Pure Python core backend (`pipewire_config.core`) independent of PyQt5
+- **PyQt5 GUI**: Single-window presentation layer with interactive device configuration and hardware mixer consoles
+- **Headless CLI**: Command-line interface (`pipewire_config.cli`) for headless scripting, automation, and CI
+- **Hardware Input & Output Mixers**: Direct ALSA mixer integration with independent Mute ("M") and Solo ("S") buttons
+- **Declarative Device Profiles**: JSON-based profiles (`pipewire_config/profiles/`) with user override support
+- **Single-Instance Enforcement**: IPC-based window activation via `QLocalServer`/`QLocalSocket`
+- **Dynamic ALSA Card Resolution**: Robust sound card targeting across multi-card systems
+- **Comprehensive Test Suite**: Automated unit and integration tests (22/22 passing)
 
 ---
 
 ## What Was Accomplished
 
 ### Phase 1: Core Application ✅
-- Created PyQt5 GUI (`pipewire-device-config.py`)
-- Implemented device detection using pw-dump
+- Created initial PyQt5 GUI
+- Implemented device detection using `pw-dump`
 - Added channel configuration controls
 - Implemented WirePlumber config file generation
-- Added custom channel naming system
 
-### Phase 2: Device Support ✅
-- Added Babyface Pro support (12 channels)
-- Created device-specific channel mapping
-- Implemented proper channel display logic
-- Hidden redundant channel names when custom names available
+### Phase 2: Device Support & Declarative Profiles ✅
+- Added Babyface Pro support (12 physical I/O channels)
+- Migrated hardcoded mappings into declarative JSON profiles (`babyface_pro.json`)
+- Implemented user profile discovery in `~/.config/pipewire-audio-config/profiles/`
 
-### Phase 3: Audio Control (NEW) ✅
-- Implemented master volume slider with real-time wpctl control
-- Added master mute button with visual feedback
-- Implemented sample rate change functionality
-- All audio changes auto-save to WirePlumber config
+### Phase 3: Hardware Mixer Consoles & Preamp Controls ✅
+- Implemented 28-channel Input Mixer console (Mic 1 & 2 preamp gains, Mic 1 & 2 L/R, Inst 3 & 4 preamp gains, Inst 3 & 4 L/R, S/PDIF L/R, ADAT 1–8)
+- Implemented 11-channel Output Mixer console with coupled stereo Main Out (AN1/2), Phones (PH3/4), S/PDIF (AS1/2), and ADAT 1–6 (ADAT3–8)
+- Added independent Mute ("M") and Solo ("S") buttons across all input and output channels
+- Integrated dynamic ALSA gain limit scaling (e.g. 0–65 dB preamps) and debounced IPC command queues
 
-### Phase 4: Device Management (NEW) ✅
-- Added one-click WirePlumber restart button
-- Auto-generated config on buffer/sample rate change
-- Proper error handling and status messages
-- Disables restart button during restart to prevent double-clicks
+### Phase 4: Architecture Modularization & Headless CLI ✅
+- Refactored monolithic script into `pipewire_config` package (`core/`, `profiles/`, `ui/`)
+- Implemented headless CLI (`pipewire_config.cli`) supporting `--list`, `--device`, `--buffer`, `--rate`, `--acp`, `--dry-run`, and `--json`
+- Created `pyproject.toml` with console and GUI entry points (`pipewire-config`, `pipewire-config-cli`)
+- Preserved backward compatibility wrappers (`pipewire-device-config.py`, `run-pipewire-config.sh`)
 
-### Phase 5: Documentation ✅
-- Created comprehensive README.md
-- Added buffer size reference guide
-- Created channel layout documentation
-- Added Babyface Pro specific guide
-- Documented device detection mechanism
-- Explained ACP mode in detail
-- Updated with v1.1.0 features
-- Updated with v1.2.0 changes (read-only channels)
+### Phase 5: Single-Instance Enforcement & Multi-Card Reliability ✅
+- Implemented local socket IPC (`SingleInstanceManager`) to raise existing instances and prevent duplicate process race conditions
+- Enhanced dynamic ALSA card resolution from PipeWire node paths (`front:X`, `hw:X,Y`) and `aplay -l`
+- Integrated real-time calculated latency display in Device Configuration
 
-### Phase 6: Setup & Installation ✅
-- Created automated setup script
-- Added multi-distro package manager support
-- Implemented dependency checking
-- Created desktop menu integration
-- Added verification testing
-- Wrote complete setup documentation
+### Phase 6: Automated Testing & Documentation ✅
+- Created automated test suite under `tests/` covering configuration generation, card detection, profile loading, and UI widget behaviors
+- Updated all documentation files under `docs/` and project `README.md`
 
 ---
 
@@ -143,20 +132,22 @@ All core features are implemented, tested, and ready for user distribution.
 │   ├── setup.sh                     (Setup script)
 │   └── SETUP.md                     (Setup guide)
 │
-├── Documentation
-│   ├── README.md                    (Overview)
+├── Documentation (docs/)
+│   ├── SETUP.md                     (Setup guide)
 │   ├── BUFFER_SIZE_REFERENCE.md     (Buffer info)
+│   ├── BUFFER_SIZE_CHANGES.md       (Buffer size changes)
 │   ├── CHANNEL_LAYOUT.md            (Channel info)
 │   ├── BABYFACE_PRO_CHANNELS.md     (Device guide)
 │   ├── DEVICE_DETECTION.md          (Detection info)
 │   ├── ACP_MODE_EXPLAINED.md        (ACP details)
+│   ├── PIPEWIRE_CONFIG_README.md    (Original config)
 │   └── PROJECT_STATUS.md            (This file)
 │
 ├── Project Files
+│   ├── README.md                    (Project overview)
 │   ├── LICENSE                      (MIT License)
 │   ├── requirements.txt             (Dependencies)
 │   ├── QUICKSTART.sh                (Quick start)
-│   ├── PIPEWIRE_CONFIG_README.md    (Original config)
 │   ├── .gitignore                   (Git config)
 │   └── .git/                        (Git repository)
 │

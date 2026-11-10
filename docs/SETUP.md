@@ -404,10 +404,13 @@ After setup, these directories are ready for use:
 
 ~/CLionProjects/pipewire-audio-config/
   ├── pipewire-device-config.py       (Main GUI)
+  ├── babyface_channels.py            (Channel maps)
   ├── run-pipewire-config.sh          (Launcher)
   ├── setup.sh                        (Setup script)
   ├── README.md                       (Overview)
-  ├── SETUP.md                        (This file)
+  ├── docs/                           (Documentation folder)
+  │   ├── SETUP.md                    (This file)
+  │   └── ...                         (Other guides)
   └── ...
 ```
 
@@ -423,13 +426,13 @@ After setup, these directories are ready for use:
 
 ### Documentation Files
 
-- **README.md** - Overview and features
-- **SETUP.md** - This file
-- **BUFFER_SIZE_REFERENCE.md** - Buffer size explanation
-- **CHANNEL_LAYOUT.md** - Channel layout information
-- **BABYFACE_PRO_CHANNELS.md** - Babyface Pro specific info
-- **DEVICE_DETECTION.md** - Device detection explained
-- **ACP_MODE_EXPLAINED.md** - ACP mode details
+- **[README.md](../README.md)** - Overview and features
+- **[SETUP.md](SETUP.md)** - This file
+- **[BUFFER_SIZE_REFERENCE.md](BUFFER_SIZE_REFERENCE.md)** - Buffer size explanation
+- **[CHANNEL_LAYOUT.md](CHANNEL_LAYOUT.md)** - Channel layout information
+- **[BABYFACE_PRO_CHANNELS.md](BABYFACE_PRO_CHANNELS.md)** - Babyface Pro specific info
+- **[DEVICE_DETECTION.md](DEVICE_DETECTION.md)** - Device detection explained
+- **[ACP_MODE_EXPLAINED.md](ACP_MODE_EXPLAINED.md)** - ACP mode details
 
 ### Reporting Issues
 

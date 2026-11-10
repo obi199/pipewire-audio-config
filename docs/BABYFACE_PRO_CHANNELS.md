@@ -84,64 +84,64 @@ Track 4: ADAT-2
 ...and so on
 ```
 
-## File Structure
+## File Structure & Declarative Profiles
 
-- **pipewire-device-config.py**: Main GUI (includes `DEVICE_CHANNEL_NAMES` mapping)
-- **babyface_channels.py**: Extended channel mapping definitions (for future expansion)
+Hardware profiles are defined declaratively in JSON format:
+- **Built-in Profile**: `pipewire_config/profiles/babyface_pro.json`
+- **User Custom Profiles**: `~/.config/pipewire-audio-config/profiles/*.json`
+
+### Babyface Pro Hardware Mixer Layout
+
+The profile defines comprehensive ALSA mixer controls:
+
+#### 1. Input Controls (28 Channels)
+- **Analog Preamps & Line Inputs**:
+  - `Mic1 Gain` (`Mic-AN1 Gain`, 0–65 dB scaled)
+  - `Mic1-L (AN1)` & `Mic1-R (AN2)` (`Mic-AN1-AN1`, `Mic-AN1-AN2`)
+  - `Mic2 Gain` (`Mic-AN2 Gain`, 0–65 dB scaled)
+  - `Mic2-L (AN1)` & `Mic2-R (AN2)` (`Mic-AN2-AN1`, `Mic-AN2-AN2`)
+  - `Inst3 Gain` (`Line-IN3 Gain`, 0–18 dB scaled)
+  - `Inst3-L (AN1)` & `Inst3-R (AN2)` (`Line-IN3-AN1`, `Line-IN3-AN2`)
+  - `Inst4 Gain` (`Line-IN4 Gain`, 0–18 dB scaled)
+  - `Inst4-L (AN1)` & `Inst4-R (AN2)` (`Line-IN4-AN1`, `Line-IN4-AN2`)
+- **Digital S/PDIF Inputs**:
+  - `S/PDIF-L (AS1/AN1)` & `S/PDIF-L (AS1/AN2)`
+  - `S/PDIF-R (AS2/AN1)` & `S/PDIF-R (AS2/AN2)`
+- **ADAT Optical Inputs**:
+  - `ADAT1-L` through `ADAT6-R` (12 channels)
+
+#### 2. Output Controls (11 Faders)
+- **Coupled Stereo Main Analog Out**:
+  - `Main (AN1/2)` (controls `Main-Out AN1` and `Main-Out AN2` simultaneously)
+- **Headphone Outs**:
+  - `Phones-L (PH3)` & `Phones-R (PH4)`
+- **Digital S/PDIF Outs**:
+  - `S/PDIF-L (AS1)` & `S/PDIF-R (AS2)`
+- **ADAT Optical Outs**:
+  - `ADAT1 (ADAT3)` through `ADAT6 (ADAT8)`
+
+Each channel includes independent **Mute ("M")** and **Solo ("S")** routing.
 
 ## Adding More Devices
 
-To add custom names for another device, edit `DEVICE_CHANNEL_NAMES` in `pipewire-device-config.py`:
+To add custom names or mixer controls for another device, place a JSON file in `~/.config/pipewire-audio-config/profiles/my_device.json`:
 
-```python
-DEVICE_CHANNEL_NAMES = {
-    "Babyface Pro": { ... },
-    "Your Device Name": {
-        "name": "Your Device - Custom Names",
-        "channels": 8,
-        "layout": {
-            "outputs": ["Out-1", "Out-2", ...],
-            "inputs": ["In-1", "In-2", ...]
-        }
-    }
+```json
+{
+  "name": "My Custom Audio Device",
+  "match_description": "MyDevice",
+  "channels": 8,
+  "has_input_mixer": false,
+  "has_output_mixer": false,
+  "channel_names": {
+    "outputs": ["Out-1", "Out-2", "Out-3", "Out-4", "Out-5", "Out-6", "Out-7", "Out-8"],
+    "inputs": ["In-1", "In-2", "In-3", "In-4", "In-5", "In-6", "In-7", "In-8"]
+  }
 }
 ```
-
-## Advanced: Alternative Naming Schemes
-
-See `babyface_channels.py` for alternative naming options:
-
-1. **Simple Names** (default)
-   - `Main-L`, `Main-R`, `ADAT-1`, etc.
-   - Clear what each channel does
-
-2. **Studio Names**
-   - `Mic-In-L`, `Line-1`, `Drums-1`, etc.
-   - Organized by function/purpose
-
-3. **Technical Names**
-   - `XLR-Out-L`, `ADAT-Out-1`, `Coax-Out-R`, etc.
-   - Specific technical details
-
-## Advantage over Standard Names
-
-### Before (Generic Names)
-```
-FL, FR, FC, LFE, RL, RR, FLC, FRC, RC, SL, SR, TC
-```
-❌ Not immediately clear which are ADAT vs main outputs
-❌ Confusing - looks like surround sound, not multi-interface setup
-
-### After (Device-Specific Names)
-```
-Main-L, Main-R, ADAT-1, ADAT-2, ..., ADAT-8, S/PDIF-L, S/PDIF-R
-```
-✅ Immediately clear which connector each channel uses
-✅ Perfect for professional setups with multiple interfaces
-✅ No confusion about physical I/O routing
 
 ## Related Files
 
 - `CHANNEL_LAYOUT.md` - Standard channel naming explanation
-- `README.md` - General project documentation
-- `pipewire-device-config.py` - Main application with mappings
+- `../README.md` - General project documentation
+- `pipewire_config/profiles/babyface_pro.json` - Declarative JSON profile definition

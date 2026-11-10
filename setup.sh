@@ -515,8 +515,8 @@ After Installation:
 
 For more information, see:
   • README.md - Overview and features
-  • SETUP.md - Detailed setup guide
-  • BUFFER_SIZE_REFERENCE.md - Buffer size explained
+  • docs/SETUP.md - Detailed setup guide
+  • docs/BUFFER_SIZE_REFERENCE.md - Buffer size explained
 
 EOF
 }

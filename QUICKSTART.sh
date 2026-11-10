@@ -58,8 +58,9 @@ echo ""
 
 echo "📖 Documentation:"
 echo "   • README.md - Main documentation"
-echo "   • PIPEWIRE_CONFIG_README.md - Detailed guide"
-echo "   • BUFFER_SIZE_REFERENCE.md - Buffer size reference"
+echo "   • docs/PIPEWIRE_CONFIG_README.md - Detailed guide"
+echo "   • docs/BUFFER_SIZE_REFERENCE.md - Buffer size reference"
+echo "   • docs/SETUP.md - Setup guide"
 echo ""
 
 echo "🔧 After Configuration:"

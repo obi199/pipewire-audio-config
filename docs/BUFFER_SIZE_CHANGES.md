@@ -202,6 +202,6 @@ When you restart WirePlumber:
 
 ## See Also
 - Buffer Size Reference: BUFFER_SIZE_REFERENCE.md
-- Device Configuration: README.md
+- Device Configuration: ../README.md
 - PipeWire Documentation: https://docs.pipewire.org/
 
