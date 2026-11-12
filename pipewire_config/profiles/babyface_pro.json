@@ -65,6 +65,28 @@
       {"key": "Main-Out ADAT8", "label": "ADAT6 (ADAT8)"}
     ]
   },
+  "startup_routing_controls": [
+    {
+      "label": "Playback-L to Phones-L",
+      "keys": ["PCM-AN1-PH3", "Line-AN1-PH3"],
+      "value": 65536
+    },
+    {
+      "label": "Playback-R to Phones-R",
+      "keys": ["PCM-AN2-PH4", "Line-AN2-PH4"],
+      "value": 65536
+    },
+    {
+      "label": "Playback-L to Phones-R (crossfeed off)",
+      "keys": ["PCM-AN1-PH4", "Line-AN1-PH4"],
+      "value": 0
+    },
+    {
+      "label": "Playback-R to Phones-L (crossfeed off)",
+      "keys": ["PCM-AN2-PH3", "Line-AN2-PH3"],
+      "value": 0
+    }
+  ],
   "layout": {
     "outputs": [
       "Main-L",

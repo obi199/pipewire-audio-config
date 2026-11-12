@@ -213,6 +213,10 @@ After changing buffer size or sample rate:
 - Check device ID: `wpctl status`
 - Try restarting PipeWire: `systemctl --user restart wireplumber`
 
+### Babyface Pro headphones (PH3/PH4) silent in CC mode
+- Enable **Copy mode** on the Babyface Pro hardware (manual chapter 34). This is the primary requirement for reliable PH monitoring in Class Compliant mode.
+- The app also applies ALSA startup matrix routing for PH3/PH4 as a fallback, but this may not be sufficient when Copy mode is disabled.
+
 ### Only stereo showing
 - Make sure "ACP Mode" is set to "Disabled (Full Channels)"
 - Not all devices support multi-channel in Class Compliant mode

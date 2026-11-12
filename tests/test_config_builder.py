@@ -43,11 +43,25 @@ class TestConfigBuilder(unittest.TestCase):
         self.assertIn("monitor.alsa.rules", config)
         self.assertIn('node.name = "~alsa_.*usb-RME_Babyface_Pro_12345-00.*"', config)
         self.assertIn("audio.channels = 12", config)
-        self.assertIn('audio.position = ["Main-L", "Main-R"', config)
+        self.assertIn('audio.position = ["AUX0", "AUX1"', config)
         self.assertIn("audio.rate = 48000", config)
         self.assertIn("latency.internal.ns = 5333333", config)
         self.assertIn("api.alsa.use-acp = false", config)
         self.assertIn("# Master Volume: 90%", config)
+        self.assertIn("# Friendly Labels: Main-L, Main-R, ADAT-1", config)
+
+    def test_generate_wireplumber_config_keeps_valid_spa_positions(self):
+        config = generate_wireplumber_config(
+            device_name="alsa_output.test",
+            channels=2,
+            rate=48000,
+            latency_ns=5333333,
+            use_acp=False,
+            channel_names=["FL", "FR"],
+            description="Test Device"
+        )
+        self.assertIn('audio.position = ["FL", "FR"]', config)
+        self.assertNotIn("# Friendly Labels:", config)
 
     def test_write_wireplumber_config(self):
         with tempfile.TemporaryDirectory() as tmpdir:

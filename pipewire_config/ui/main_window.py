@@ -23,6 +23,7 @@ from ..core.config_builder import (
 from ..core.alsa_mixer import (
     get_alsa_card_index,
     apply_fader_gain,
+    apply_startup_control_map,
     apply_input_gain,
     get_wpctl_device_id,
     apply_volume,
@@ -206,6 +207,11 @@ class MainWindow(QMainWindow):
         profile = self.profile_loader.get_profile_for_device(dev.get('description', ''))
         self.input_mixer_panel.set_profile(profile, card_idx=card_idx)
         self.output_mixer_panel.set_profile(profile, card_idx=card_idx)
+
+        if profile and dev.get('media_class') == 'Audio/Sink':
+            startup_controls = profile.get('startup_routing_controls', [])
+            if isinstance(startup_controls, list):
+                apply_startup_control_map(card_idx, startup_controls)
 
     def on_fader_gain_changed(self, control_key: str, value: int):
         self._last_fader_interaction_time = time.time()

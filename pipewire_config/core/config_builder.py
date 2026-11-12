@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import List, Optional
 
 BUFFER_SIZES = [32, 64, 128, 256, 512, 1024, 2048, 4096]
+_SPA_STANDARD_POSITIONS = {
+    "FL", "FR", "FC", "LFE", "SL", "SR", "RL", "RR", "RC",
+    "FLC", "FRC", "RLC", "RRC", "TC", "TFL", "TFC", "TFR",
+    "TRL", "TRC", "TRR", "LFE2", "MONO"
+}
 
 
 def nearest_buffer_size(samples: int) -> int:
@@ -76,8 +81,19 @@ def generate_wireplumber_config(
         16: '[ "FL", "FR", "FC", "LFE", "RL", "RR", "FLC", "FRC", "RC", "SL", "SR", "TC", "TFL", "TFR", "TRL", "TRR" ]',
     }
 
+    friendly_channel_labels = None
     if channel_names and len(channel_names) == channels:
-        position = json.dumps(channel_names)
+        upper_names = [name.upper() for name in channel_names]
+        valid_spa_names = all(
+            name in _SPA_STANDARD_POSITIONS or re.fullmatch(r'AUX\d+', name) for name in upper_names
+        )
+        if valid_spa_names:
+            position = json.dumps(channel_names)
+        else:
+            # PipeWire/WirePlumber expects valid SPA channel symbols in audio.position.
+            # Custom labels such as "Main-L" or "ADAT-1" can break routing on pro-audio cards.
+            position = json.dumps([f"AUX{i}" for i in range(channels)])
+            friendly_channel_labels = channel_names
     else:
         position = position_map.get(channels, '[ "FL", "FR" ]')
 
@@ -85,6 +101,9 @@ def generate_wireplumber_config(
     buffer_ms = (buffer_samples / rate * 1000) if rate > 0 else 0.0
 
     desc_line = f"# Device: {description}\n" if description else ""
+    friendly_labels_line = ""
+    if friendly_channel_labels:
+        friendly_labels_line = f"# Friendly Labels: {', '.join(friendly_channel_labels)}\n"
 
     config = f"""# PipeWire Audio Device Configuration
 {desc_line}# Auto-generated configuration
@@ -92,6 +111,7 @@ def generate_wireplumber_config(
 # Buffer Size: {buffer_samples} samples ({buffer_ms:.2f}ms @ {rate}Hz)
 # Master Volume: {master_volume}%
 # Master Mute: {"true" if master_muted else "false"}
+{friendly_labels_line}
 
 monitor.alsa.rules = [
   {{

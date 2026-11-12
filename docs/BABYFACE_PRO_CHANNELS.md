@@ -4,6 +4,9 @@
 
 Instead of generic surround sound labels (FL, FR, FC, etc.), the Babyface Pro now uses **meaningful physical I/O names** that reflect the actual connectors and functions.
 
+> **Important (RME CC Mode):** For reliable headphone monitoring on PH3/PH4, enable **Copy mode** on the Babyface Pro hardware (manual chapter 34).  
+> The app applies ALSA matrix defaults as a fallback, but software routing alone may still not produce headphone output when Copy mode is off.
+
 ## Physical Layout of Babyface Pro
 
 ### Outputs (12 channels total)
@@ -69,9 +72,9 @@ Device Information:
 ### In PipeWire
 
 When the config is applied:
-- PipeWire still uses the standard names internally (FL, FR, etc.)
-- But DAWs and applications see the friendly names (Main-L, ADAT-1, etc.)
-- Makes routing much clearer when working with 12 channels
+- WirePlumber writes valid SPA channel positions in `audio.position` (uses `AUX0..AUX11` for Babyface Pro) to preserve correct port routing in Class Compliant mode.
+- Friendly labels (`Main-L`, `ADAT-1`, etc.) remain in the UI and generated config comments for reference.
+- This avoids channel remapping issues that can affect headphone and digital port routing on pro-audio interfaces.
 
 ### In Your DAW
 
@@ -121,6 +124,13 @@ The profile defines comprehensive ALSA mixer controls:
   - `ADAT1 (ADAT3)` through `ADAT6 (ADAT8)`
 
 Each channel includes independent **Mute ("M")** and **Solo ("S")** routing.
+
+#### 3. Startup Headphone Matrix Routing (CC Mode)
+- On device selection, the profile applies playback matrix defaults so stereo playback reaches headphones:
+  - `PCM-AN1-PH3` (or fallback `Line-AN1-PH3`) = 100%
+  - `PCM-AN2-PH4` (or fallback `Line-AN2-PH4`) = 100%
+  - Crossfeeds `*-PH4` / `*-PH3` for opposite channels = 0%
+- This addresses the common Class Compliant mode case where PH3/PH4 need explicit internal matrix routing.
 
 ## Adding More Devices
 

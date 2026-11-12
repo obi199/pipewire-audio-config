@@ -3,7 +3,7 @@
 import os
 import re
 import subprocess
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 
 
 def get_alsa_card_index(device: Dict[str, Any]) -> int:
@@ -107,6 +107,36 @@ def apply_input_gain(card: int, control_name: str, value: int) -> bool:
 # Aliases for generic mixer gain handling (both inputs and outputs)
 get_fader_gain = get_input_gain
 apply_fader_gain = apply_input_gain
+
+
+def apply_startup_control_map(card: int, controls: List[Dict[str, Any]]) -> int:
+    """Apply profile-defined ALSA control defaults using first available fallback key."""
+    applied = 0
+    for spec in controls or []:
+        if not isinstance(spec, dict):
+            continue
+        raw_value = spec.get('value', 65536)
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            continue
+        value = min(65536, max(0, value))
+
+        keys = spec.get('keys')
+        if not isinstance(keys, list):
+            keys = [spec.get('key')] if spec.get('key') else []
+
+        for key in keys:
+            if not isinstance(key, str) or not key.strip():
+                continue
+            # Probe for control existence first; this avoids needless amixer errors
+            # when fallback keys are profile alternatives for kernel naming variants.
+            if get_fader_gain(card, key) is None:
+                continue
+            if apply_fader_gain(card, key, value):
+                applied += 1
+            break
+    return applied
 
 
 def get_wpctl_device_id(device_identifier: Any, cache: Optional[Dict[str, str]] = None) -> Optional[str]:

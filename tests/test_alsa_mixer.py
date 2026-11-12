@@ -6,6 +6,7 @@ from pipewire_config.core.alsa_mixer import (
     get_alsa_card_index,
     get_input_gain,
     apply_input_gain,
+    apply_startup_control_map,
     get_wpctl_device_id,
     apply_volume,
     apply_mute,
@@ -59,6 +60,25 @@ Simple mixer control 'Line-ADAT3-AN1',0
             text=True,
             timeout=2
         )
+
+    @patch('pipewire_config.core.alsa_mixer.apply_fader_gain')
+    @patch('pipewire_config.core.alsa_mixer.get_fader_gain')
+    def test_apply_startup_control_map_uses_first_available_key(self, mock_get_fader_gain, mock_apply_fader_gain):
+        def fake_get(card, key):
+            return 10000 if key in {"PCM-AN1-PH3", "Line-AN2-PH4"} else None
+
+        mock_get_fader_gain.side_effect = fake_get
+        mock_apply_fader_gain.return_value = True
+
+        applied = apply_startup_control_map(2, [
+            {"keys": ["PCM-AN1-PH3", "Line-AN1-PH3"], "value": 65536},
+            {"keys": ["PCM-AN2-PH4", "Line-AN2-PH4"], "value": 65536},
+            {"key": "PCM-AN1-PH4", "value": 0}
+        ])
+
+        self.assertEqual(applied, 2)
+        mock_apply_fader_gain.assert_any_call(2, "PCM-AN1-PH3", 65536)
+        mock_apply_fader_gain.assert_any_call(2, "Line-AN2-PH4", 65536)
 
     @patch('subprocess.run')
     def test_get_wpctl_device_id_and_cache(self, mock_run):
